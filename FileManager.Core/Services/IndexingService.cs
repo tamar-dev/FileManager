@@ -11,7 +11,7 @@ public class IndexingService
     public IndexingService(IFileRepository repository, FileEntryFactory? fileEntryFactory = null)
     {
         _repository = repository;
-        _fileEntryFactory = fileEntryFactory ?? new FileEntryFactory();
+        _fileEntryFactory = fileEntryFactory ?? new FileEntryFactory(repository: repository);
     }
 
 
@@ -37,7 +37,7 @@ public class IndexingService
         {
             try
             {
-                return _fileEntryFactory.Create(fullPath);
+                return await _fileEntryFactory.CreateAsync(fullPath);
             }
             catch (IOException) when (attempt < maxAttempts)
             {
