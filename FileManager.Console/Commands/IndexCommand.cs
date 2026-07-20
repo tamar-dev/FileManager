@@ -1,32 +1,31 @@
 using FileManager.Core.Services;
-using FileManager.Infrastructure.Persistence;
-using FileManager.Infrastructure.Repositories;
-using Microsoft.EntityFrameworkCore;
+using FileManager.Application.Services;
 
 namespace FileManager.Cli.Commands;
 
 public class IndexCommand
 {
+    private readonly IIndexingAppService _indexingAppService;
+
+    public IndexCommand(IIndexingAppService indexingAppService)
+    {
+        _indexingAppService = indexingAppService;
+    }
+
     public async Task ExecuteAsync(string path)
     {
-        var options = new DbContextOptionsBuilder<FileManagerDbContext>()
-            .UseSqlite("Data Source=filemanager.db")
-            .Options;
-
-        using var context = new FileManagerDbContext(options);
-
-        context.Database.Migrate();
-
-        var repository = new FileRepository(context);
-
-        var scanner = new FileScanner();
-
-        var initialIndexingService = new InitialIndexingService(scanner, repository);
-
         Console.WriteLine($"Indexing: {path}");
 
-        await initialIndexingService.IndexDirectoryAsync(path);
+        var progress = new Progress<string>(file => Console.WriteLine($"Indexed: {file}"));
 
-        Console.WriteLine("Indexing complete.");
+        var result = await _indexingAppService.IndexDirectoryAsync(path, progress);
+
+        if (!result.Success)
+        {
+            Console.WriteLine($"Indexing failed: {result.ErrorMessage}");
+            return;
+        }
+
+        Console.WriteLine($"Indexing complete. {result.FilesIndexed} files indexed.");
     }
 }

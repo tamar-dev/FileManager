@@ -1,28 +1,24 @@
 ﻿using FileManager.Core.Services;
+using FileManager.Core.Interfaces;
+using FileManager.Core.Services;
 using FileManager.Infrastructure.FileSystem;
-using FileManager.Infrastructure.Repositories;
-using FileManager.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 namespace FileManager.Cli.Commands;
 
 public class WatchCommand
 {
+    private readonly IFileRepository _repository;
+
+    public WatchCommand(IFileRepository repository)
+    {
+        _repository = repository;
+    }
+
     public async Task ExecuteAsync(string path)
     {
         var queue = new FileChangeQueue();
 
-        var options = new DbContextOptionsBuilder<FileManagerDbContext>()
-            .UseSqlite("Data Source=filemanager.db")
-            .Options;
-
-        using var context = new FileManagerDbContext(options);
-
-        context.Database.Migrate();
-
-        var repository = new FileRepository(context);
-
-        var indexingService = new IndexingService(repository);
+        var indexingService = new IndexingService(_repository);
 
         var worker = new FileChangeWorker(
             queue,

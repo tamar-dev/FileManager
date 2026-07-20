@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\FileManager.Core\FileManager.Core.csproj" />
     <ProjectReference Include="..\FileManager.Infrastructure\FileManager.Infrastructure.csproj" />
+    <ProjectReference Include="..\FileManager.Application\FileManager.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -10,6 +11,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
   </ItemGroup>
 
   <PropertyGroup>
