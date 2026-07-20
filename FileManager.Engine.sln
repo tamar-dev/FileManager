@@ -9,6 +9,27 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FileManager.Core", "FileMan
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FileManager.Infrastructure", "FileManager.Infrastructure\FileManager.Infrastructure.csproj", "{65C9B3C8-0101-4FF0-8755-01A34C8CCE7B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
+	ProjectSection(SolutionItems) = preProject
+		Docs\ARCHITECTURE.md = Docs\ARCHITECTURE.md
+		Docs\DATA_FLOW.md = Docs\DATA_FLOW.md
+		Docs\DOMAIN_MODEL.md = Docs\DOMAIN_MODEL.md
+		Docs\INDEX_ENGINE.md = Docs\INDEX_ENGINE.md
+		Docs\PERFORMANCE.md = Docs\PERFORMANCE.md
+		Docs\PRD.md = Docs\PRD.md
+		Docs\ROADMAP.md = Docs\ROADMAP.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ADR", "ADR", "{686FAE74-0CEB-44E0-92DE-ABE9DF03729C}"
+	ProjectSection(SolutionItems) = preProject
+		Docs\decisions\ADR-001-Architecture.md = Docs\decisions\ADR-001-Architecture.md
+		Docs\decisions\ADR-002-IndexEngine.md = Docs\decisions\ADR-002-IndexEngine.md
+		Docs\decisions\ADR-003-VirtualFolders.md = Docs\decisions\ADR-003-VirtualFolders.md
+		Docs\decisions\ADR-004-Indexing-Strategy.md = Docs\decisions\ADR-004-Indexing-Strategy.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "c4", "c4", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,6 +51,10 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{686FAE74-0CEB-44E0-92DE-ABE9DF03729C} = {8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}
+		{02EA681E-C7D8-13C7-8484-4AC65E1B71E8} = {8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FA3436CF-DD0C-46DA-99E9-9B9716AD530E}

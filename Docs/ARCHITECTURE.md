@@ -1,36 +1,46 @@
+	# Architecture
 # Architecture
 
-High level:
+## Overview
 
-Filesystem
-    |
-    v
-Index Engine
-    |
-    +-- Initial Indexer
-    +-- Change Monitor
-    +-- Metadata Store
-    +-- Hash Worker
-    +-- Virtual Folder Engine
+See C4 diagrams:
+- [C1 - System Context](c4/C1-CONTEXT.md)
+- [C2 - Container Diagram](c4/C2-CONTAINER.md)
 
+## Purpose
+Build a modular desktop file management engine over the native filesystem.
 
-Projects:
+## Layering
+- `FileManager.Core`
+  - Entities
+  - Interfaces
+  - Business rules
+  - Module contracts
+- `FileManager.Infrastructure`
+  - SQLite metadata persistence
+  - Filesystem adapters
+  - OS integrations (e.g., change notifications)
+- `FileManager.Cli`
+  - Composition root and startup only
+  - No business logic
 
-FileManager.Core
-- Entities
-- Interfaces
-- Business rules
+## Module Boundaries (Target)
+- Index Engine
+- Metadata Store
+- Virtual Folder Engine
+- Tag Engine
+- Duplicate Detection
+- Collection Engine
+- Query Engine
+- Thumbnail Cache
 
-FileManager.Infrastructure
-- SQLite
-- Filesystem implementations
-- External APIs
+Each module has a single responsibility and stable contracts in `Core`.
 
-FileManager.Cli
-- Application startup only
-
-
-Rules:
-- Do not put business logic in CLI.
-- Keep components replaceable.
-- Prefer dependency injection.
+## Rules
+- Keep `Core` independent from `Infrastructure`.
+- Keep indexing implementation replaceable.
+- Separate:
+  - Initial indexing
+  - Change monitoring
+  - Metadata persistence
+- `FileSystemWatcher` is an implementation detail, not an architectural dependency.

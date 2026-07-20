@@ -1,19 +1,21 @@
 # FileManager Engine - Product Requirements
 
 ## Vision
-A local desktop file management engine that creates an intelligent organization layer above the physical filesystem.
+FileManager is a local desktop file management engine.
 
-The product is NOT primarily a search engine.
-Search is only one capability consuming the indexed metadata.
-
-## Core Capabilities
-- Virtual folders
-- File organization without duplication
-- Duplicate detection
-- Metadata management
-- Smart collections
-- Photo organization
+It provides a logical organization layer above the native filesystem and is **not** primarily a search engine.
+Search is one consumer of metadata, not the product goal.
 
 ## Core Principle
-Filesystem = source of raw data.
-Index = source of truth for application features.
+- Physical filesystem: source of truth for physical files.
+- Application database/index: source of truth for logical organization and application metadata.
+- The engine never owns physical files; it indexes and organizes them.
+
+## Primary Capabilities
+- Virtual folders
+- Associate one file with multiple logical folders
+- Tags and metadata
+- Duplicate detection
+- Smart collections
+- Large photo library organization
+- Persistent metadata store synchronized with filesystem changes
