@@ -5,7 +5,13 @@ namespace FileManager.Core.Services;
 
 public class FileScanner : IFileScanner
 {
-    private readonly FileHasher _hasher = new();
+    private readonly FileEntryFactory _fileEntryFactory;
+
+    public FileScanner(FileEntryFactory? fileEntryFactory = null)
+    {
+        _fileEntryFactory = fileEntryFactory ?? new FileEntryFactory();
+    }
+
     public IEnumerable<FileEntry> Scan(string path)
     {
         var files = Directory.EnumerateFiles(
@@ -16,17 +22,7 @@ public class FileScanner : IFileScanner
 
         foreach (var file in files)
         {
-            var info = new FileInfo(file);
-
-            yield return new FileEntry
-            {
-                FullPath = info.FullName,
-                Name = info.Name,
-                Size = info.Length,
-                Extension = info.Extension,
-                LastModified = info.LastWriteTime,
-                Hash = _hasher.Calculate(info.FullName)
-            };
+            yield return _fileEntryFactory.Create(file);
         }
     }
 }

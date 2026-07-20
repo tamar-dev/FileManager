@@ -7,4 +7,6 @@ public interface IFileRepository
     Task UpsertAsync(FileEntry file);
 
     Task DeleteAsync(string fullPath);
+
+    Task<IReadOnlyList<FileEntry>> GetAllAsync();
 }

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace FileManager.Core.Interfaces
 {
-    internal interface IFileScanner
+    public interface IFileScanner
     {
         IEnumerable<FileEntry> Scan(string path);
     }

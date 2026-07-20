@@ -59,4 +59,11 @@ public class FileRepository : IFileRepository
     {
         return _context.Files.Count();
     }
+
+    public async Task<IReadOnlyList<FileEntry>> GetAllAsync()
+    {
+        return await _context.Files
+            .Where(f => !f.IsDeleted)
+            .ToListAsync();
+    }
 }

@@ -6,10 +6,12 @@ namespace FileManager.Core.Services;
 public class IndexingService
 {
     private readonly IFileRepository _repository;
+    private readonly FileEntryFactory _fileEntryFactory;
 
-    public IndexingService(IFileRepository repository)
+    public IndexingService(IFileRepository repository, FileEntryFactory? fileEntryFactory = null)
     {
         _repository = repository;
+        _fileEntryFactory = fileEntryFactory ?? new FileEntryFactory();
     }
 
 
@@ -18,21 +20,32 @@ public class IndexingService
         if (!File.Exists(fullPath))
             return;
 
-        var info = new FileInfo(fullPath);
+        var entry = await CreateEntryWithRetryAsync(fullPath);
 
-        var entry = new FileEntry
-        {
-            FullPath = info.FullName,
-            Name = info.Name,
-            Extension = info.Extension,
-            Size = info.Length,
-            LastModified = info.LastWriteTimeUtc,
-            Hash = ""
-        };
+        if (entry == null)
+            return;
 
         await _repository.UpsertAsync(entry);
         Console.WriteLine(
     $"Indexed: {entry.FullPath}");
+    }
+
+
+    private async Task<Entities.FileEntry?> CreateEntryWithRetryAsync(string fullPath, int maxAttempts = 3)
+    {
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                return _fileEntryFactory.Create(fullPath);
+            }
+            catch (IOException) when (attempt < maxAttempts)
+            {
+                await Task.Delay(100 * attempt);
+            }
+        }
+
+        return null;
     }
 
 

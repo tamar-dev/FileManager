@@ -17,6 +17,11 @@ public class FileManagerDbContext : DbContext
     protected override void OnConfiguring(
     DbContextOptionsBuilder optionsBuilder)
     {
+        if (optionsBuilder.IsConfigured)
+        {
+            return;
+        }
+
         var dbPath = Path.Combine(
             Directory.GetCurrentDirectory(),
             "filemanager.db");

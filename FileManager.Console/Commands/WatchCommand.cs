@@ -18,6 +18,8 @@ public class WatchCommand
 
         using var context = new FileManagerDbContext(options);
 
+        context.Database.Migrate();
+
         var repository = new FileRepository(context);
 
         var indexingService = new IndexingService(repository);

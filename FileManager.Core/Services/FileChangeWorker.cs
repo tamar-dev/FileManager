@@ -23,7 +23,14 @@ public class FileChangeWorker
         {
             if (_queue.TryDequeue(out var change))
             {
-                await ProcessAsync(change!);
+                try
+                {
+                    await ProcessAsync(change!);
+                }
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+                {
+                    Console.WriteLine($"Failed to process change for '{change!.FullPath}': {ex.Message}");
+                }
             }
             else
             {
