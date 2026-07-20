@@ -1,9 +1,9 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32505.173
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FileManager.Cli", "FileManager.Console\FileManager.Cli.csproj", "{8EF269DB-8541-4D44-BC6C-9561DDD79A54}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FileManager.Cli", "FileManager.Cli\FileManager.Cli.csproj", "{8EF269DB-8541-4D44-BC6C-9561DDD79A54}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FileManager.Core", "FileManager.Core\FileManager.Core.csproj", "{F6CE58B3-51D6-4EDE-9CDE-38BC7B841B9B}"
 EndProject
