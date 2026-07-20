@@ -9,4 +9,6 @@ public interface IFileRepository
     Task DeleteAsync(string fullPath);
 
     Task<IReadOnlyList<FileEntry>> GetAllAsync();
+
+    Task<FileEntry?> GetByPathAsync(string fullPath);
 }

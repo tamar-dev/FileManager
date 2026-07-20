@@ -97,6 +97,41 @@ public class FileRepositoryTests : IDisposable
         files.Single().Hash.Should().Be("6600CCE3A93121E79F93AD2175251D6D4C9B2A1241FBC1A8A45058E94E16ECD2");
     }
 
+    [Fact]
+    public async Task GetByPathAsync_ExistingPath_ReturnsFileEntry()
+    {
+        await _repository.UpsertAsync(CreateEntry("a.txt", hash: "HASH1"));
+
+        var result = await _repository.GetByPathAsync("a.txt");
+
+        result.Should().NotBeNull();
+        result!.FullPath.Should().Be("a.txt");
+        result.Hash.Should().Be("HASH1");
+    }
+
+    [Fact]
+    public async Task GetByPathAsync_MissingPath_ReturnsNull()
+    {
+        var result = await _repository.GetByPathAsync("does-not-exist.txt");
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetByPathAsync_SoftDeletedEntry_ReturnsNull()
+    {
+        var entry = CreateEntry("a.txt", hash: "HASH1");
+        await _repository.UpsertAsync(entry);
+
+        var persisted = await _context.Files.FirstAsync(f => f.FullPath == "a.txt");
+        persisted.IsDeleted = true;
+        await _context.SaveChangesAsync();
+
+        var result = await _repository.GetByPathAsync("a.txt");
+
+        result.Should().BeNull();
+    }
+
     private static FileEntry CreateEntry(string fullPath, string hash, long size = 100)
     {
         return new FileEntry

@@ -66,4 +66,10 @@ public class FileRepository : IFileRepository
             .Where(f => !f.IsDeleted)
             .ToListAsync();
     }
+
+    public async Task<FileEntry?> GetByPathAsync(string fullPath)
+    {
+        return await _context.Files
+            .FirstOrDefaultAsync(f => f.FullPath == fullPath && !f.IsDeleted);
+    }
 }
