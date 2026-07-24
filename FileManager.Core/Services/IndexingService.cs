@@ -33,17 +33,38 @@ public class IndexingService
 
     private async Task<Entities.FileEntry?> CreateEntryWithRetryAsync(string fullPath, int maxAttempts = 3)
     {
+        Exception? lastException = null;
+
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
             try
             {
                 return await _fileEntryFactory.CreateAsync(fullPath);
             }
-            catch (IOException) when (attempt < maxAttempts)
+            catch (IOException ex) when (attempt < maxAttempts)
             {
+                lastException = ex;
                 await Task.Delay(100 * attempt);
             }
+            catch (UnauthorizedAccessException ex) when (attempt < maxAttempts)
+            {
+                lastException = ex;
+                await Task.Delay(100 * attempt);
+            }
+            catch (IOException ex)
+            {
+                lastException = ex;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                lastException = ex;
+            }
         }
+
+        // All retries were exhausted. This must not be silent: log so that the
+        // failure is visible instead of the file quietly falling out of the index.
+        Console.WriteLine(
+            $"[IndexingService] Failed to index '{fullPath}' after {maxAttempts} attempts: {lastException?.Message}");
 
         return null;
     }
