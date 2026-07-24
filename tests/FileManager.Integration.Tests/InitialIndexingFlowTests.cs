@@ -35,9 +35,8 @@ public class InitialIndexingFlowTests : IDisposable
         File.WriteAllText(Path.Combine(_dataFolder, "a.txt"), "content A");
         File.WriteAllText(Path.Combine(_dataFolder, "b.txt"), "content B");
 
-        var scanner = new FileScanner();
         var repository = new FileRepository(_context);
-        var service = new InitialIndexingService(scanner, repository);
+        var service = new InitialIndexingService(repository, new FileSystemIndexSource(), new FileEntryFactory());
 
         await service.IndexDirectoryAsync(_dataFolder);
 
@@ -52,9 +51,8 @@ public class InitialIndexingFlowTests : IDisposable
     {
         File.WriteAllText(Path.Combine(_dataFolder, "a.txt"), "content A");
 
-        var scanner = new FileScanner();
         var repository = new FileRepository(_context);
-        var service = new InitialIndexingService(scanner, repository);
+        var service = new InitialIndexingService(repository, new FileSystemIndexSource(), new FileEntryFactory());
 
         await service.IndexDirectoryAsync(_dataFolder);
 

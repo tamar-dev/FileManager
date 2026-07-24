@@ -14,24 +14,46 @@ public class FileRepository : IFileRepository
         _context = context;
     }
 
-
     public void AddRange(IEnumerable<FileEntry> files)
     {
         _context.Files.AddRange(files);
         _context.SaveChanges();
     }
 
-    public async Task UpsertAsync(FileEntry file)
+    public Task UpsertAsync(FileEntry file)
     {
-        var existing = await _context.Files
-            .FirstOrDefaultAsync(f => f.FullPath == file.FullPath);
+        return UpsertBatchAsync([file]);
+    }
 
-        if (existing == null)
+    public async Task UpsertBatchAsync(
+        IReadOnlyCollection<FileEntry> files,
+        CancellationToken cancellationToken = default)
+    {
+        if (files.Count == 0)
         {
-            _context.Files.Add(file);
+            return;
         }
-        else
+
+        var paths = files
+            .Select(file => file.FullPath)
+            .Distinct()
+            .ToList();
+
+        var existingEntries = await _context.Files
+            .Where(f => paths.Contains(f.FullPath))
+            .ToListAsync(cancellationToken);
+
+        var existingByPath = existingEntries
+            .ToDictionary(file => file.FullPath, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var file in files)
         {
+            if (!existingByPath.TryGetValue(file.FullPath, out var existing))
+            {
+                _context.Files.Add(file);
+                continue;
+            }
+
             existing.Name = file.Name;
             existing.Extension = file.Extension;
             existing.Size = file.Size;
@@ -39,7 +61,7 @@ public class FileRepository : IFileRepository
             existing.Hash = file.Hash;
         }
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task DeleteAsync(string fullPath)
@@ -71,5 +93,19 @@ public class FileRepository : IFileRepository
     {
         return await _context.Files
             .FirstOrDefaultAsync(f => f.FullPath == fullPath && !f.IsDeleted);
+    }
+
+    public async Task<IReadOnlyList<FileEntry>> GetByPathsAsync(
+        IReadOnlyCollection<string> fullPaths,
+        CancellationToken cancellationToken = default)
+    {
+        if (fullPaths.Count == 0)
+        {
+            return [];
+        }
+
+        return await _context.Files
+            .Where(f => fullPaths.Contains(f.FullPath) && !f.IsDeleted)
+            .ToListAsync(cancellationToken);
     }
 }

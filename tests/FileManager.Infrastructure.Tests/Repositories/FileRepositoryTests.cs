@@ -55,6 +55,26 @@ public class FileRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task UpsertBatchAsync_MixedEntries_InsertsAndUpdates()
+    {
+        await _repository.UpsertAsync(CreateEntry("a.txt", hash: "OLD", size: 10));
+
+        var batch = new List<FileEntry>
+        {
+            CreateEntry("a.txt", hash: "NEW", size: 20),
+            CreateEntry("b.txt", hash: "HASH-B", size: 30)
+        };
+
+        await _repository.UpsertBatchAsync(batch);
+
+        var files = await _repository.GetAllAsync();
+
+        files.Should().HaveCount(2);
+        files.Should().Contain(f => f.FullPath == "a.txt" && f.Hash == "NEW" && f.Size == 20);
+        files.Should().Contain(f => f.FullPath == "b.txt" && f.Hash == "HASH-B" && f.Size == 30);
+    }
+
+    [Fact]
     public async Task DeleteAsync_ExistingFile_RemovesFile()
     {
         var entry = CreateEntry("a.txt", hash: "HASH1");
@@ -130,6 +150,23 @@ public class FileRepositoryTests : IDisposable
         var result = await _repository.GetByPathAsync("a.txt");
 
         result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetByPathsAsync_ReturnsOnlyRequestedNonDeletedEntries()
+    {
+        await _repository.UpsertAsync(CreateEntry("a.txt", hash: "HASH1"));
+        await _repository.UpsertAsync(CreateEntry("b.txt", hash: "HASH2"));
+        await _repository.UpsertAsync(CreateEntry("c.txt", hash: "HASH3"));
+
+        var deleted = await _context.Files.FirstAsync(f => f.FullPath == "c.txt");
+        deleted.IsDeleted = true;
+        await _context.SaveChangesAsync();
+
+        var result = await _repository.GetByPathsAsync(["a.txt", "c.txt", "missing.txt"]);
+
+        result.Should().HaveCount(1);
+        result.Single().FullPath.Should().Be("a.txt");
     }
 
     private static FileEntry CreateEntry(string fullPath, string hash, long size = 100)

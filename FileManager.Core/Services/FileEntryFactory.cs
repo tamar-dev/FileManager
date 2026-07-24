@@ -1,5 +1,4 @@
 using FileManager.Core.Entities;
-
 using FileManager.Core.Interfaces;
 
 namespace FileManager.Core.Services;
@@ -30,7 +29,7 @@ public class FileEntryFactory
         };
     }
 
-    public async Task<FileEntry> CreateAsync(string fullPath)
+    public async Task<FileEntry> CreateAsync(string fullPath, FileEntry? existingEntry = null)
     {
         var info = new FileInfo(fullPath);
 
@@ -47,16 +46,16 @@ public class FileEntryFactory
             };
         }
 
-        var existingEntry = _repository != null 
-            ? await _repository.GetByPathAsync(info.FullName) 
+        existingEntry ??= _repository != null
+            ? await _repository.GetByPathAsync(info.FullName)
             : null;
 
         var currentSize = info.Length;
         var currentLastModified = info.LastWriteTimeUtc;
 
         string hash;
-        if (existingEntry != null && 
-            existingEntry.Size == currentSize && 
+        if (existingEntry != null &&
+            existingEntry.Size == currentSize &&
             existingEntry.LastModified == currentLastModified)
         {
             hash = existingEntry.Hash;
