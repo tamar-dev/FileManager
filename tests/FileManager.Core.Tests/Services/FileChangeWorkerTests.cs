@@ -51,6 +51,15 @@ public class FileChangeWorkerTests
         public Task<IReadOnlyList<FileEntry>> GetByPathsAsync(IReadOnlyCollection<string> fullPaths, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<FileEntry>>(
                 _files.Values.Where(f => fullPaths.Contains(f.FullPath)).ToList());
+
+        public Task<IReadOnlyList<FileEntry>> SearchAsync(
+            string? name = null,
+            string? extension = null,
+            string? path = null,
+            DateTime? modifiedAfter = null,
+            DateTime? modifiedBefore = null,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<FileEntry>>(_files.Values.ToList());
     }
 
     [Fact]

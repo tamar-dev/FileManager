@@ -108,4 +108,45 @@ public class FileRepository : IFileRepository
             .Where(f => fullPaths.Contains(f.FullPath) && !f.IsDeleted)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<FileEntry>> SearchAsync(
+        string? name = null,
+        string? extension = null,
+        string? path = null,
+        DateTime? modifiedAfter = null,
+        DateTime? modifiedBefore = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Files
+            .Where(f => !f.IsDeleted);
+
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            query = query.Where(f => EF.Functions.Like(f.Name, $"%{name}%"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(extension))
+        {
+            query = query.Where(f => f.Extension == extension);
+        }
+
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            query = query.Where(f => EF.Functions.Like(f.FullPath, $"%{path}%"));
+        }
+
+        if (modifiedAfter.HasValue)
+        {
+            query = query.Where(f => f.LastModified >= modifiedAfter.Value);
+        }
+
+        if (modifiedBefore.HasValue)
+        {
+            query = query.Where(f => f.LastModified <= modifiedBefore.Value);
+        }
+
+        return await query
+            .OrderBy(f => f.FullPath)
+            .ToListAsync(cancellationToken);
+    }
 }
