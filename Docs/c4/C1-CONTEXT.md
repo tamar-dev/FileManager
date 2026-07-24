@@ -1,14 +1,14 @@
 # C1 - System Context Diagram
 
 ## Purpose
-Shows how FileManager Engine fits into the user's environment and interacts with external systems.
+Shows how FileManager fits into the user's environment and interacts with external systems.
 
 ## Diagram
 
 ```mermaid
 graph TB
     User([User])
-    FileManager[FileManager Engine<br/>Desktop file management<br/>and metadata engine]
+    FileManager[FileManager<br/>Local desktop file<br/>management application]
     FileSystem[(Windows File System<br/>Physical files)]
 
     User -->|Organizes files via CLI| FileManager
@@ -25,19 +25,22 @@ graph TB
 ### User
 Desktop user who wants to organize their local files without changing physical file locations.
 
-### FileManager Engine
-Desktop file management engine that provides:
+### FileManager
+Local desktop file management application that provides:
 - Virtual folder organization
+- Collections and albums
 - Tag and metadata management
+- Timeline-based browsing
 - Duplicate detection
-- Smart collections
-- File change monitoring
+- Thumbnail generation
+- Future AI enrichment
 
 ### Windows File System
-The native file system where physical files reside.
-FileManager reads metadata and monitors changes but never owns or relocates physical files.
+The native filesystem where physical files reside.
+FileManager reads file metadata and monitors changes but never modifies, moves, renames, or
+deletes any physical file.
 
 ## Key Principles
-- Physical file system is the source of truth for physical files
-- FileManager database is the source of truth for logical organization and metadata
-- FileManager never owns physical files, only indexes them
+- The physical filesystem is the source of truth for physical files
+- The Metadata Store is the source of truth for logical organization and application metadata
+- FileManager never modifies physical files — it indexes and organizes them virtually

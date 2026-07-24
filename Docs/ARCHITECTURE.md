@@ -1,4 +1,44 @@
-# Architecture
+# FileManager — Architecture
+
+## Product Context
+
+FileManager is a local desktop file management application. The architecture exists to support a
+product that helps users organize and rediscover their files without changing the physical folder
+structure. The indexing engine, virtual organization layer, and future AI enrichment pipeline are
+all internal capabilities that serve that user experience.
+
+**The architecture must always enforce the separation between the physical filesystem (which the
+application reads but never modifies) and the application's own data (metadata, virtual
+organization, AI-generated metadata).**
+
+See [C4 diagrams](c4/C1-CONTEXT.md) for visual representations.
+
+---
+
+## Non-Negotiable Architectural Rules
+
+These rules are not implementation preferences. They constrain every layer of the system and must
+never be violated by any new feature, service, or background process.
+
+- **Never delete, move, rename, or overwrite physical user files automatically.**
+  Every write operation on the physical filesystem must be an explicit, user-initiated action with
+  confirmation. Indexing, change monitoring, duplicate detection, thumbnail generation, and AI
+  enrichment are all read-only filesystem operations.
+
+- **The user's filesystem is the source of truth for physical files.**
+  The application index reflects the filesystem. The filesystem never reflects the index.
+
+- **The application owns only metadata and virtual organization.**
+  Virtual folders, collections, albums, tags, and AI-generated metadata live in the application
+  database. They do not create or alter anything on disk.
+
+- **Background services may read files; they must never write to them.**
+
+- **AI enrichment is an optional, additive, read-only metadata layer.**
+  AI analysis reads file content and writes only to the application's own metadata store.
+  It must not trigger any file operation.
+
+---
 
 ## Overview
 
@@ -7,7 +47,8 @@ See C4 diagrams:
 - [C2 - Container Diagram](c4/C2-CONTAINER.md)
 
 ## Purpose
-Build a modular desktop file management engine over the native filesystem.
+Build a modular desktop file management application over the native filesystem, providing a virtual
+organization layer that lets users organize files logically without altering their physical location.
 
 ## Layering
 - `FileManager.Core`
@@ -17,7 +58,7 @@ Build a modular desktop file management engine over the native filesystem.
   - Module contracts
 - `FileManager.Infrastructure`
   - SQLite metadata persistence
-  - Filesystem adapters
+  - Filesystem adapters (read-only access to physical files)
   - OS integrations (e.g., change notifications)
   - `AddFileManagerInfrastructure()` DI registration (DbContext, `IFileRepository`, `IFileScanner`, `IIndexSource`, `FileEntryFactory`, `InitialIndexingService`)
 - `FileManager.Application`
@@ -63,6 +104,7 @@ Responsibilities:
 - Enumerate every file path that should be considered for indexing under `rootPath`.
 - Support cooperative cancellation via `CancellationToken`.
 - Return only paths — no metadata, no hashing, no persistence.
+- Never modify, move, rename, or delete any file.
 
 ### `FileSystemIndexSource` — Current Implementation
 `FileSystemIndexSource` (in `FileManager.Core/Services`) is the default implementation registered in DI.
@@ -97,14 +139,18 @@ Windows):
    any Application/CLI layer.
 
 ## Module Boundaries (Target)
-- Index Engine
-- Metadata Store
-- Virtual Folder Engine
-- Tag Engine
-- Duplicate Detection
-- Collection Engine
-- Query Engine
-- Thumbnail Cache
+
+| Module | Responsibility |
+|---|---|
+| Index Engine | Reliable metadata synchronization with the filesystem |
+| Metadata Store | Persistent storage for file properties and hashes |
+| Virtual Folder Engine | Logical organization independent of physical structure |
+| Tag Engine | User-applied and AI-generated labels |
+| Duplicate Detection | Identifying duplicate files; user decides on action |
+| Collection Engine | Named groupings (albums, smart collections) |
+| Query Engine | Powering search and browsing across metadata |
+| Thumbnail Cache | Background preview generation (read-only on source files) |
+| AI Enrichment (future) | Optional metadata layer: categorization, OCR, recognition |
 
 Each module has a single responsibility and stable contracts in `Core`.
 
@@ -119,3 +165,5 @@ Each module has a single responsibility and stable contracts in `Core`.
 - `FileSystemWatcher` is an implementation detail, not an architectural dependency.
 - `FileSystemIndexSource` is an implementation detail, not a business-logic dependency.
 - All front ends consume business logic exclusively through `FileManager.Application` services.
+- Infrastructure adapters that touch the filesystem are **read-only**; any future write operation
+  on physical files must be gated behind an explicit user action at the Application layer.

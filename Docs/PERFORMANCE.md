@@ -1,63 +1,73 @@
-# Performance Strategy
+# FileManager — Performance Strategy
 
-The target is an indexing architecture inspired by high performance desktop indexers.
+> **Constraint:** All performance optimizations described here are read-only operations on the
+> physical filesystem. Background workers read file content; they never write to, move, rename,
+> or delete any physical file.
 
-Important concepts:
+---
 
-## Separate storage from access speed
+## Separate Storage from Access Speed
 
-Persistent storage:
+**Persistent storage** (source of truth for metadata):
 - SQLite
-- Reliable metadata storage
+- Reliable, durable metadata store
 
-Fast access layer:
-- Memory index
-- Optimized structures for frequent operations
+**Fast access layer** (optimized for frequent queries):
+- In-memory index
+- Optimized structures for browsing, search, and duplicate detection
 
+---
 
 ## Background Processing
 
-Heavy operations should not block indexing:
+Heavy operations must not block the indexing pipeline or the UI. They run in the background and
+interact with the filesystem in a **read-only** manner.
 
-File discovery
+```
+File discovery (IIndexSource)          [read-only: enumerate paths]
     |
     v
-Metadata saved
+Metadata saved to index
     |
     v
 Background workers:
-- Hash calculation
-- Thumbnail generation
-- Content analysis
+    - Hash calculation                 [read-only: read file content, write hash to index]
+    - Thumbnail generation             [read-only: read file content, write thumbnail to cache]
+    - AI enrichment (future)           [read-only: read file content, write metadata to index]
+```
 
+Background workers write only to the application's own stores (index database, thumbnail cache,
+metadata store). They never write to physical files.
+
+---
 
 ## Incremental Updates
 
-Never rebuild the whole index after every change.
-Only process affected files.
+Never rebuild the whole index after every change. Only process affected files.
 
-## Next Milestone: Incremental Indexing & Hash Recalculation Avoidance
+See [ADR-005](ADR/ADR-005-Incremental-Indexing.md) and
+[ADR-006](decisions/ADR-006-FileEntryFactory-Hash-Reuse.md) for full rationale.
 
-See [ADR-005](ADR/ADR-005-Incremental-Indexing.md) for full rationale.
+### Hash Recalculation Avoidance
 
-Goal: avoid recomputing a file's SHA-256 hash when its cheap-to-read metadata
-(`Size`, `LastModified`) matches what is already persisted for that path.
+SHA-256 hashing is the most expensive part of indexing (full file read). `FileEntryFactory`
+avoids recomputing hashes when a file's cheap-to-read metadata (`Size`, `LastModified`) matches
+what is already persisted for that path.
 
-Planned approach:
-1. Add a single-file lookup to `IFileRepository` (e.g. `GetByPathAsync(string fullPath)`), so
-   callers don't need to load the entire index to check one file.
-2. Introduce a decision point (in `Core`, replacing/augmenting `FileEntryFactory.Create`) that:
-   - Fetches the existing entry for the path, if any.
-   - Skips `FileHasher.Calculate` and reuses the existing `Hash` when `Size` and `LastModified`
-     are unchanged.
-   - Recomputes the hash for new files or files whose metadata changed.
-3. Apply this to both:
-   - **Initial/full scans** (`FileScanner` / `InitialIndexingService` / `IndexingAppService`) —
-     re-scanning an unchanged directory should touch metadata only, not file contents.
-   - **Watcher-driven updates** (`FileChangeWorker` ? `IndexingService`) — `Changed` events that
-     don't actually change size/mtime should not trigger a re-hash.
-4. Measure before/after: full re-index time on a large, mostly-unchanged directory; per-event
-   latency in the watcher pipeline.
+Decision logic (in `Core`, not `Infrastructure`):
+1. Look up the existing `FileEntry` for the path via `IFileRepository`.
+2. If `Size` and `LastModified` are unchanged ? reuse the existing hash; skip file read.
+3. If metadata changed or no entry exists ? compute a new hash.
 
-Explicitly out of scope for this milestone: content-defined chunking, partial hashing for large
-files, and rename detection — tracked separately.
+This applies to both full initial scans and watcher-driven updates.
+
+---
+
+## Future Performance Work
+
+- Memory/cache access layer for frequent queries (browsing, search, virtual folder membership).
+- Replaceable indexing sources (`IIndexSource`) for faster enumeration:
+  - NTFS MFT-based reader (avoids recursive directory traversal on Windows).
+  - USN Journal-based reader (incremental deltas without full re-scan).
+- Incremental update optimizations to reduce per-event latency in the watcher pipeline.
+- Operational diagnostics to surface indexing throughput and error rates.
