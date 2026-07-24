@@ -25,6 +25,7 @@ public class LocalFileWatcher : IDisposable
         _watcher.Changed += OnChanged;
         _watcher.Deleted += OnDeleted;
         _watcher.Renamed += OnRenamed;
+        _watcher.Error += OnError;
     }
 
     public void Start()
@@ -72,6 +73,11 @@ public class LocalFileWatcher : IDisposable
             FullPath = e.FullPath,
             OldFullPath = e.OldFullPath
         });
+    }
+
+    private void OnError(object? sender, ErrorEventArgs e)
+    {
+        Console.WriteLine($"[LocalFileWatcher] FileSystemWatcher error: {e.GetException().Message}");
     }
 
     public void Dispose()

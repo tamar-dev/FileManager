@@ -14,10 +14,57 @@ public class FileSystemIndexSource : IIndexSource
         string rootPath,
         CancellationToken cancellationToken = default)
     {
-        foreach (var filePath in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
+        return EnumerateSafe(rootPath, cancellationToken);
+    }
+
+    private static IEnumerable<string> EnumerateSafe(
+        string directory,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        IEnumerable<string> files;
+        try
+        {
+            files = Directory.EnumerateFiles(directory);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            yield break;
+        }
+        catch (IOException)
+        {
+            yield break;
+        }
+
+        foreach (var file in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            yield return filePath;
+            yield return file;
+        }
+
+        IEnumerable<string> subdirectories;
+        try
+        {
+            subdirectories = Directory.EnumerateDirectories(directory);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            yield break;
+        }
+        catch (IOException)
+        {
+            yield break;
+        }
+
+        foreach (var subdirectory in subdirectories)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            foreach (var file in EnumerateSafe(subdirectory, cancellationToken))
+            {
+                yield return file;
+            }
         }
     }
 }

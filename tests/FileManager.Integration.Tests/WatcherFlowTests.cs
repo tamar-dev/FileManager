@@ -131,6 +131,42 @@ public class WatcherFlowTests : IDisposable
         result.Should().NotContain(f => f.FullPath == filePath);
     }
 
+    [Fact]
+    public async Task RenamingFile_UpdatesIndexWithNewPathAndRemovesOldPath()
+    {
+        var oldPath = Path.Combine(_watchedFolder, "original.txt");
+        var newPath = Path.Combine(_watchedFolder, "renamed.txt");
+
+        File.WriteAllText(oldPath, "rename test content");
+
+        // Wait for the created event to be processed before renaming.
+        await WaitUntilAsync(async () =>
+        {
+            var files = await ReadAllAsync();
+            return files.Any(f => f.FullPath == oldPath);
+        });
+
+        File.Move(oldPath, newPath);
+
+        // New path must appear in the index.
+        await WaitUntilAsync(async () =>
+        {
+            var files = await ReadAllAsync();
+            return files.Any(f => f.FullPath == newPath);
+        });
+
+        // Old path must be removed.
+        await WaitUntilAsync(async () =>
+        {
+            var files = await ReadAllAsync();
+            return files.All(f => f.FullPath != oldPath);
+        });
+
+        var result = await ReadAllAsync();
+        result.Should().Contain(f => f.FullPath == newPath);
+        result.Should().NotContain(f => f.FullPath == oldPath);
+    }
+
     private static async Task WaitUntilAsync(Func<Task<bool>> condition)
     {
         var start = DateTime.UtcNow;

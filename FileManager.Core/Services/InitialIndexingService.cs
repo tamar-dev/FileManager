@@ -61,12 +61,21 @@ public class InitialIndexingService
 
             existingByPath.TryGetValue(filePath, out var existingEntry);
 
-            var entry = await _fileEntryFactory.CreateAsync(filePath, existingEntry);
-
-            batchEntries.Add(entry);
-            Console.WriteLine($"Indexed: {entry.FullPath}");
+            try
+            {
+                var entry = await _fileEntryFactory.CreateAsync(filePath, existingEntry);
+                batchEntries.Add(entry);
+                Console.WriteLine($"Indexed: {entry.FullPath}");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Console.WriteLine($"Skipping file '{filePath}': {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
-        await _repository.UpsertBatchAsync(batchEntries, cancellationToken);
+        if (batchEntries.Count > 0)
+        {
+            await _repository.UpsertBatchAsync(batchEntries, cancellationToken);
+        }
     }
 }

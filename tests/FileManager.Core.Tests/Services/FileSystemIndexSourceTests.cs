@@ -53,6 +53,81 @@ public class FileSystemIndexSourceTests : IDisposable
         act.Should().Throw<OperationCanceledException>();
     }
 
+    [Fact]
+    public void EnumeratePaths_SubdirectoryDeletedDuringScan_DoesNotThrow()
+    {
+        // Arrange: create a sibling subdirectory that exists at enumeration time,
+        // then delete it before the recursive step reaches it.
+        // This simulates an IOException / DirectoryNotFoundException that the safe
+        // enumerator must swallow without aborting the whole scan.
+        var accessibleDir = Path.Combine(_tempDirectory, "accessible");
+        Directory.CreateDirectory(accessibleDir);
+        var accessibleFile = Path.Combine(accessibleDir, "file.txt");
+        File.WriteAllText(accessibleFile, "content");
+
+        var vanishingDir = Path.Combine(_tempDirectory, "vanishing");
+        Directory.CreateDirectory(vanishingDir);
+        File.WriteAllText(Path.Combine(vanishingDir, "ghost.txt"), "content");
+
+        // Delete the directory so the enumerator encounters a missing path mid-scan.
+        Directory.Delete(vanishingDir, recursive: true);
+
+        var source = new FileSystemIndexSource();
+
+        var act = () => source.EnumeratePaths(_tempDirectory).ToList();
+
+        // Must not throw even though one subdirectory disappeared between discovery
+        // and enumeration.
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void EnumeratePaths_SubdirectoryDeletedDuringScan_StillReturnsAccessibleFiles()
+    {
+        var accessibleDir = Path.Combine(_tempDirectory, "accessible");
+        Directory.CreateDirectory(accessibleDir);
+        var accessibleFile = Path.Combine(accessibleDir, "file.txt");
+        File.WriteAllText(accessibleFile, "content");
+
+        var vanishingDir = Path.Combine(_tempDirectory, "vanishing");
+        Directory.CreateDirectory(vanishingDir);
+        Directory.Delete(vanishingDir, recursive: true);
+
+        var source = new FileSystemIndexSource();
+
+        var paths = source.EnumeratePaths(_tempDirectory).ToList();
+
+        paths.Should().Contain(accessibleFile);
+    }
+
+    [Fact]
+    public void EnumeratePaths_MultipleSubdirectories_InaccessibleOneDoesNotPreventOthers()
+    {
+        // dir-a: accessible, has a file
+        var dirA = Path.Combine(_tempDirectory, "dir-a");
+        Directory.CreateDirectory(dirA);
+        var fileA = Path.Combine(dirA, "a.txt");
+        File.WriteAllText(fileA, "content-a");
+
+        // dir-b: will vanish before enumeration reaches it
+        var dirB = Path.Combine(_tempDirectory, "dir-b");
+        Directory.CreateDirectory(dirB);
+        Directory.Delete(dirB, recursive: true);
+
+        // dir-c: accessible, has a file
+        var dirC = Path.Combine(_tempDirectory, "dir-c");
+        Directory.CreateDirectory(dirC);
+        var fileC = Path.Combine(dirC, "c.txt");
+        File.WriteAllText(fileC, "content-c");
+
+        var source = new FileSystemIndexSource();
+
+        var paths = source.EnumeratePaths(_tempDirectory).ToList();
+
+        paths.Should().Contain(fileA);
+        paths.Should().Contain(fileC);
+    }
+
     private string CreateFile(string name)
     {
         var path = Path.Combine(_tempDirectory, name);

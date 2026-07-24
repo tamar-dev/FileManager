@@ -14,7 +14,7 @@ public class FileEntryFactory
         _repository = repository;
     }
 
-    public FileEntry Create(string fullPath)
+    public virtual FileEntry Create(string fullPath)
     {
         var info = new FileInfo(fullPath);
 
@@ -25,11 +25,12 @@ public class FileEntryFactory
             Extension = info.Extension,
             Size = info.Exists ? info.Length : 0,
             LastModified = info.Exists ? info.LastWriteTimeUtc : default,
-            Hash = info.Exists ? _hasher.Calculate(info.FullName) : ""
+            Hash = info.Exists ? _hasher.Calculate(info.FullName) : "",
+            IndexedAt = DateTime.UtcNow
         };
     }
 
-    public async Task<FileEntry> CreateAsync(string fullPath, FileEntry? existingEntry = null)
+    public virtual async Task<FileEntry> CreateAsync(string fullPath, FileEntry? existingEntry = null)
     {
         var info = new FileInfo(fullPath);
 
@@ -42,7 +43,8 @@ public class FileEntryFactory
                 Extension = info.Extension,
                 Size = 0,
                 LastModified = default,
-                Hash = ""
+                Hash = "",
+                IndexedAt = DateTime.UtcNow
             };
         }
 
@@ -72,7 +74,8 @@ public class FileEntryFactory
             Extension = info.Extension,
             Size = currentSize,
             LastModified = currentLastModified,
-            Hash = hash
+            Hash = hash,
+            IndexedAt = DateTime.UtcNow
         };
     }
 }

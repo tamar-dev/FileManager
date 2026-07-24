@@ -137,6 +137,58 @@ public class FileEntryFactoryTests : IDisposable
         mockRepository.Verify(r => r.GetByPathAsync(fileInfo.FullName), Times.Once);
     }
 
+    [Fact]
+    public void Create_ExistingFile_SetsIndexedAtToUtcNow()
+    {
+        var path = CreateFile("hello world");
+        var before = DateTime.UtcNow;
+
+        var entry = _factory.Create(path);
+
+        var after = DateTime.UtcNow;
+        entry.IndexedAt.Should().BeOnOrAfter(before);
+        entry.IndexedAt.Should().BeOnOrBefore(after);
+    }
+
+    [Fact]
+    public void Create_MissingFile_SetsIndexedAtToUtcNow()
+    {
+        var path = Path.Combine(_tempDirectory, "does-not-exist.txt");
+        var before = DateTime.UtcNow;
+
+        var entry = _factory.Create(path);
+
+        var after = DateTime.UtcNow;
+        entry.IndexedAt.Should().BeOnOrAfter(before);
+        entry.IndexedAt.Should().BeOnOrBefore(after);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ExistingFile_SetsIndexedAtToUtcNow()
+    {
+        var path = CreateFile("hello world");
+        var before = DateTime.UtcNow;
+
+        var entry = await _factory.CreateAsync(path);
+
+        var after = DateTime.UtcNow;
+        entry.IndexedAt.Should().BeOnOrAfter(before);
+        entry.IndexedAt.Should().BeOnOrBefore(after);
+    }
+
+    [Fact]
+    public async Task CreateAsync_MissingFile_SetsIndexedAtToUtcNow()
+    {
+        var path = Path.Combine(_tempDirectory, "does-not-exist.txt");
+        var before = DateTime.UtcNow;
+
+        var entry = await _factory.CreateAsync(path);
+
+        var after = DateTime.UtcNow;
+        entry.IndexedAt.Should().BeOnOrAfter(before);
+        entry.IndexedAt.Should().BeOnOrBefore(after);
+    }
+
     private string CreateFile(string content)
     {
         var path = Path.Combine(_tempDirectory, Guid.NewGuid().ToString("N") + ".txt");
