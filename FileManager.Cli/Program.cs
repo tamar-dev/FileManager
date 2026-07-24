@@ -12,6 +12,7 @@ if (args.Length == 0)
     Console.WriteLine("  index <path>");
     Console.WriteLine("  watch <path>");
     Console.WriteLine("  duplicates");
+    Console.WriteLine("  search [--name x] [--ext x] [--path x] [--after date] [--before date]");
     return;
 }
 
@@ -22,6 +23,7 @@ services.AddFileManagerApplication();
 services.AddTransient<IndexCommand>();
 services.AddTransient<WatchCommand>();
 services.AddTransient<DuplicatesCommand>();
+services.AddTransient<SearchCommand>();
 
 await using var provider = services.BuildServiceProvider();
 
@@ -74,6 +76,17 @@ switch (args[0].ToLowerInvariant())
             var duplicatesCommand = scope.ServiceProvider.GetRequiredService<DuplicatesCommand>();
 
             await duplicatesCommand.ExecuteAsync();
+
+            break;
+        }
+
+    case "search":
+        {
+            using var scope = provider.CreateScope();
+
+            var searchCommand = scope.ServiceProvider.GetRequiredService<SearchCommand>();
+
+            await searchCommand.ExecuteAsync(args.Skip(1).ToArray());
 
             break;
         }
