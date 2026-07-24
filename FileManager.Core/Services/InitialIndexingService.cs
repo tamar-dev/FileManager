@@ -8,13 +8,13 @@ public class InitialIndexingService
     private const int BatchSize = 500;
 
     private readonly IFileRepository _repository;
-    private readonly FileEntryFactory _fileEntryFactory;
+    private readonly IFileEntryFactory _fileEntryFactory;
     private readonly IIndexSource _indexSource;
 
     public InitialIndexingService(
         IFileRepository repository,
         IIndexSource indexSource,
-        FileEntryFactory fileEntryFactory)
+        IFileEntryFactory fileEntryFactory)
     {
         _repository = repository;
         _indexSource = indexSource;

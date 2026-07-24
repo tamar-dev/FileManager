@@ -10,39 +10,11 @@ public class InitialIndexingServiceTests : IDisposable
 {
     private readonly string _tempDirectory;
     private readonly FileSystemIndexSource _fileSystemIndexSource = new();
-    private readonly FileEntryFactory _fileEntryFactory = new();
+    private readonly IFileEntryFactory _fileEntryFactory = new FileEntryFactory();
 
     public InitialIndexingServiceTests()
     {
         _tempDirectory = Directory.CreateTempSubdirectory("InitialIndexingServiceTests").FullName;
-    }
-
-    // -------------------------------------------------------------------------
-    // Stub helper — lets individual tests control which paths succeed or throw.
-    // Avoids Moq proxy issues with a concrete class that has no parameterless ctor.
-    // -------------------------------------------------------------------------
-    private sealed class StubFileEntryFactory : FileEntryFactory
-    {
-        private readonly Dictionary<string, Func<Task<FileEntry>>> _overrides = new();
-
-        public void SetupThrows<TException>(string path, TException exception)
-            where TException : Exception
-        {
-            _overrides[path] = () => throw exception;
-        }
-
-        public void SetupReturns(string path, FileEntry entry)
-        {
-            _overrides[path] = () => Task.FromResult(entry);
-        }
-
-        public override Task<FileEntry> CreateAsync(string fullPath, FileEntry? existingEntry = null)
-        {
-            if (_overrides.TryGetValue(fullPath, out var handler))
-                return handler();
-
-            return base.CreateAsync(fullPath, existingEntry);
-        }
     }
 
     [Fact]
@@ -107,7 +79,7 @@ public class InitialIndexingServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task IndexDirectoryAsync_ReindexUnchangedFolder_ReuseingHashes()
+    public async Task IndexDirectoryAsync_ReindexUnchangedFolder_ReusesExistingHashes()
     {
         var path = CreateFile("same.txt", "same content");
         var info = new FileInfo(path);
@@ -217,10 +189,16 @@ public class InitialIndexingServiceTests : IDisposable
             .Setup(s => s.EnumeratePaths(_tempDirectory, It.IsAny<CancellationToken>()))
             .Returns([goodPath1, badPath, goodPath2]);
 
-        var stub = new StubFileEntryFactory();
-        stub.SetupReturns(goodPath1, new FileEntry { FullPath = goodPath1, Hash = "HASH1" });
-        stub.SetupThrows(badPath, new IOException("File is locked"));
-        stub.SetupReturns(goodPath2, new FileEntry { FullPath = goodPath2, Hash = "HASH2" });
+        var factoryMock = new Mock<IFileEntryFactory>();
+        factoryMock
+            .Setup(f => f.CreateAsync(goodPath1, It.IsAny<FileEntry?>()))
+            .ReturnsAsync(new FileEntry { FullPath = goodPath1, Hash = "HASH1" });
+        factoryMock
+            .Setup(f => f.CreateAsync(badPath, It.IsAny<FileEntry?>()))
+            .ThrowsAsync(new IOException("File is locked"));
+        factoryMock
+            .Setup(f => f.CreateAsync(goodPath2, It.IsAny<FileEntry?>()))
+            .ReturnsAsync(new FileEntry { FullPath = goodPath2, Hash = "HASH2" });
 
         var repositoryMock = new Mock<IFileRepository>();
         repositoryMock
@@ -233,7 +211,7 @@ public class InitialIndexingServiceTests : IDisposable
             .Callback<IReadOnlyCollection<FileEntry>, CancellationToken>((entries, _) => upserted = entries)
             .Returns(Task.CompletedTask);
 
-        var service = new InitialIndexingService(repositoryMock.Object, indexSourceMock.Object, stub);
+        var service = new InitialIndexingService(repositoryMock.Object, indexSourceMock.Object, factoryMock.Object);
 
         await service.IndexDirectoryAsync(_tempDirectory);
 
@@ -253,9 +231,13 @@ public class InitialIndexingServiceTests : IDisposable
             .Setup(s => s.EnumeratePaths(_tempDirectory, It.IsAny<CancellationToken>()))
             .Returns([goodPath, restrictedPath]);
 
-        var stub = new StubFileEntryFactory();
-        stub.SetupReturns(goodPath, new FileEntry { FullPath = goodPath, Hash = "HASH_GOOD" });
-        stub.SetupThrows(restrictedPath, new UnauthorizedAccessException("Access denied"));
+        var factoryMock = new Mock<IFileEntryFactory>();
+        factoryMock
+            .Setup(f => f.CreateAsync(goodPath, It.IsAny<FileEntry?>()))
+            .ReturnsAsync(new FileEntry { FullPath = goodPath, Hash = "HASH_GOOD" });
+        factoryMock
+            .Setup(f => f.CreateAsync(restrictedPath, It.IsAny<FileEntry?>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Access denied"));
 
         var repositoryMock = new Mock<IFileRepository>();
         repositoryMock
@@ -268,7 +250,7 @@ public class InitialIndexingServiceTests : IDisposable
             .Callback<IReadOnlyCollection<FileEntry>, CancellationToken>((entries, _) => upserted = entries)
             .Returns(Task.CompletedTask);
 
-        var service = new InitialIndexingService(repositoryMock.Object, indexSourceMock.Object, stub);
+        var service = new InitialIndexingService(repositoryMock.Object, indexSourceMock.Object, factoryMock.Object);
 
         await service.IndexDirectoryAsync(_tempDirectory);
 
@@ -288,16 +270,17 @@ public class InitialIndexingServiceTests : IDisposable
             .Setup(s => s.EnumeratePaths(_tempDirectory, It.IsAny<CancellationToken>()))
             .Returns([path1, path2]);
 
-        var stub = new StubFileEntryFactory();
-        stub.SetupThrows(path1, new IOException("Locked"));
-        stub.SetupThrows(path2, new IOException("Locked"));
+        var factoryMock = new Mock<IFileEntryFactory>();
+        factoryMock
+            .Setup(f => f.CreateAsync(It.IsAny<string>(), It.IsAny<FileEntry?>()))
+            .ThrowsAsync(new IOException("All files locked"));
 
         var repositoryMock = new Mock<IFileRepository>();
         repositoryMock
             .Setup(r => r.GetByPathsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
-        var service = new InitialIndexingService(repositoryMock.Object, indexSourceMock.Object, stub);
+        var service = new InitialIndexingService(repositoryMock.Object, indexSourceMock.Object, factoryMock.Object);
 
         await service.IndexDirectoryAsync(_tempDirectory);
 

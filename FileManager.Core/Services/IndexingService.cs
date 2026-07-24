@@ -6,9 +6,9 @@ namespace FileManager.Core.Services;
 public class IndexingService
 {
     private readonly IFileRepository _repository;
-    private readonly FileEntryFactory _fileEntryFactory;
+    private readonly IFileEntryFactory _fileEntryFactory;
 
-    public IndexingService(IFileRepository repository, FileEntryFactory? fileEntryFactory = null)
+    public IndexingService(IFileRepository repository, IFileEntryFactory? fileEntryFactory = null)
     {
         _repository = repository;
         _fileEntryFactory = fileEntryFactory ?? new FileEntryFactory(repository: repository);

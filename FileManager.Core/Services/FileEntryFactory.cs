@@ -3,7 +3,7 @@ using FileManager.Core.Interfaces;
 
 namespace FileManager.Core.Services;
 
-public class FileEntryFactory
+public class FileEntryFactory : IFileEntryFactory
 {
     private readonly FileHasher _hasher;
     private readonly IFileRepository? _repository;
@@ -14,7 +14,7 @@ public class FileEntryFactory
         _repository = repository;
     }
 
-    public virtual FileEntry Create(string fullPath)
+    public FileEntry Create(string fullPath)
     {
         var info = new FileInfo(fullPath);
 
@@ -30,7 +30,7 @@ public class FileEntryFactory
         };
     }
 
-    public virtual async Task<FileEntry> CreateAsync(string fullPath, FileEntry? existingEntry = null)
+    public async Task<FileEntry> CreateAsync(string fullPath, FileEntry? existingEntry = null)
     {
         var info = new FileInfo(fullPath);
 

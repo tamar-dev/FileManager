@@ -19,7 +19,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFileRepository, FileRepository>();
         services.AddScoped<IFileScanner, FileScanner>();
         services.AddScoped<IIndexSource, FileSystemIndexSource>();
-        services.AddScoped<FileEntryFactory>();
+        services.AddScoped<IFileEntryFactory, FileEntryFactory>();
         services.AddScoped<InitialIndexingService>();
 
         return services;

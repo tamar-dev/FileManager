@@ -5,9 +5,9 @@ namespace FileManager.Core.Services;
 
 public class FileScanner : IFileScanner
 {
-    private readonly FileEntryFactory _fileEntryFactory;
+    private readonly IFileEntryFactory _fileEntryFactory;
 
-    public FileScanner(FileEntryFactory? fileEntryFactory = null)
+    public FileScanner(IFileEntryFactory? fileEntryFactory = null)
     {
         _fileEntryFactory = fileEntryFactory ?? new FileEntryFactory();
     }

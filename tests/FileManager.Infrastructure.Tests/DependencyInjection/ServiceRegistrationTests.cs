@@ -30,9 +30,11 @@ public class ServiceRegistrationTests
     {
         using var provider = BuildProvider();
 
-        var factory = provider.GetService<FileEntryFactory>();
+        using var scope = provider.CreateScope();
+        var factory = scope.ServiceProvider.GetService<IFileEntryFactory>();
 
         factory.Should().NotBeNull();
+        factory.Should().BeOfType<FileEntryFactory>();
     }
 
     [Fact]
