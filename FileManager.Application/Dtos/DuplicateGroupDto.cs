@@ -2,6 +2,8 @@ namespace FileManager.Application.Dtos;
 
 public class DuplicateGroupDto
 {
+    public string Id { get; set; } = "";
+
     public string Hash { get; set; } = "";
 
     public int FileCount { get; set; }
@@ -9,6 +11,8 @@ public class DuplicateGroupDto
     public long TotalSize { get; set; }
 
     public long WastedSize { get; set; }
+
+    public string Type { get; set; } = "";
 
     public IReadOnlyList<FileResultDto> Files { get; set; } = [];
 }

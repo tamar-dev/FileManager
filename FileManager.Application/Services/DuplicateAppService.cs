@@ -35,12 +35,16 @@ public class DuplicateAppService : IDuplicateAppService
             ? totalSize - files[0].Size
             : 0;
 
+        var type = files.Count > 0 ? FileTypeClassifier.Classify(files[0].Extension) : "other";
+
         return new DuplicateGroupDto
         {
+            Id = group.Key,
             Hash = group.Key,
             FileCount = files.Count,
             TotalSize = totalSize,
             WastedSize = wastedSize,
+            Type = type,
             Files = files
         };
     }
@@ -49,12 +53,14 @@ public class DuplicateAppService : IDuplicateAppService
     {
         return new FileResultDto
         {
+            Id = entry.FullPath,
             FullPath = entry.FullPath,
             Name = entry.Name,
             Size = entry.Size,
             Extension = entry.Extension,
             LastModified = entry.LastModified,
-            Hash = entry.Hash
+            Hash = entry.Hash,
+            Type = FileTypeClassifier.Classify(entry.Extension)
         };
     }
 }

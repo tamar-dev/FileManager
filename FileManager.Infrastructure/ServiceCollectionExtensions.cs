@@ -19,6 +19,7 @@ public static class ServiceCollectionExtensions
             options.UseSqlite(connectionString));
 
         services.AddScoped<IFileRepository, FileRepository>();
+        services.AddScoped<IIndexedRootRepository, IndexedRootRepository>();
         services.AddScoped<IFileScanner, FileScanner>();
         services.AddScoped<IIndexSource, FileSystemIndexSource>();
         services.AddScoped<IFileEntryFactory, FileEntryFactory>();
