@@ -1,4 +1,5 @@
 using FileManager.Application.Dtos;
+using FileManager.Application.Dtos;
 using FileManager.Core.Interfaces;
 
 namespace FileManager.Application.Services;
@@ -12,7 +13,7 @@ public class SearchAppService : ISearchAppService
         _repository = repository;
     }
 
-    public async Task<IReadOnlyList<FileResultDto>> SearchAsync(SearchQueryDto query)
+    public async Task<IReadOnlyList<SearchResultDto>> SearchAsync(SearchQueryDto query)
     {
         var files = await _repository.GetAllAsync();
 
@@ -44,13 +45,15 @@ public class SearchAppService : ISearchAppService
         }
 
         return results
-            .Select(f => new FileResultDto
+            .Select(f => new SearchResultDto
             {
-                FullPath = f.FullPath,
+                Id = f.Id,
                 Name = f.Name,
+                Path = f.FullPath,
                 Size = f.Size,
                 Extension = f.Extension,
-                LastModified = f.LastModified,
+                Modified = f.LastModified,
+                Type = FileTypeClassifier.Classify(f.Extension),
                 Hash = f.Hash
             })
             .ToList();

@@ -4,5 +4,5 @@ namespace FileManager.Application.Services;
 
 public interface ISearchAppService
 {
-    Task<IReadOnlyList<FileResultDto>> SearchAsync(SearchQueryDto query);
+    Task<IReadOnlyList<SearchResultDto>> SearchAsync(SearchQueryDto query);
 }

@@ -1,6 +1,5 @@
 ﻿using FileManager.Cli.Commands;
 using FileManager.Application;
-using FileManager.Cli.Commands;
 using FileManager.Infrastructure;
 using FileManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +23,7 @@ services.AddFileManagerApplication();
 services.AddTransient<IndexCommand>();
 services.AddTransient<WatchCommand>();
 services.AddTransient<DuplicatesCommand>();
-services.AddTransient<SearchCommand>();
+//services.AddTransient<SearchCommand>();
 services.AddTransient<DashboardCommand>();
 
 await using var provider = services.BuildServiceProvider();
