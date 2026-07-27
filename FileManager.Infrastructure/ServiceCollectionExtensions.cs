@@ -11,8 +11,10 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddFileManagerInfrastructure(
         this IServiceCollection services,
-        string connectionString = "Data Source=filemanager.db")
+        string? connectionString = null)
     {
+        connectionString ??= FileManagerPaths.ConnectionString;
+
         services.AddDbContext<FileManagerDbContext>(options =>
             options.UseSqlite(connectionString));
 
