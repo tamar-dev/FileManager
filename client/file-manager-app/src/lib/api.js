@@ -10,6 +10,16 @@ export async function getDashboard() {
   return response.json()
 }
 
+export async function getDuplicates() {
+  const response = await fetch(`${API_BASE_URL}/api/duplicates`)
+
+  if (!response.ok) {
+    throw new Error(`Duplicates request failed: ${response.status}`)
+  }
+
+  return response.json()
+}
+
 export async function searchFiles(params = {}) {
   const searchParams = new URLSearchParams()
 
