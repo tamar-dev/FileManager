@@ -95,6 +95,12 @@ public class FileRepository : IFileRepository
             .FirstOrDefaultAsync(f => f.FullPath == fullPath && !f.IsDeleted);
     }
 
+    public async Task<FileEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _context.Files
+            .FirstOrDefaultAsync(f => f.Id == id && !f.IsDeleted, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<FileEntry>> GetByPathsAsync(
         IReadOnlyCollection<string> fullPaths,
         CancellationToken cancellationToken = default)

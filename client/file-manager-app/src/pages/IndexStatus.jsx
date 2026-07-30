@@ -2,36 +2,82 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Activity, Zap, Clock, FileStack, FolderOpen, ArrowRight,
-  Plus, Edit3, Trash2, CheckCircle2, FilePlus, FileEdit, FileMinus, FileOutput
+  Plus, Edit3, Trash2, CheckCircle2, Loader2
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
-import { indexStatusData, indexedLocations } from "@/lib/mockData";
+import { getIndexStatus, getIndexedLocations } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
+const STATE_LABELS = {
+  idle: "Idle",
+  running: "Indexing",
+  completed: "Completed",
+  failed: "Failed",
+};
+
+const STATE_COLORS = {
+  idle: "bg-muted text-muted-foreground",
+  running: "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400",
+  completed: "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400",
+  failed: "bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400",
+};
+
 export default function IndexStatus() {
-  const [progress, setProgress] = useState(indexStatusData.progress);
-  const [filesScanned, setFilesScanned] = useState(indexStatusData.filesScanned);
+  const [status, setStatus] = useState(null);
+  const [statusError, setStatusError] = useState(null);
+  const [locations, setLocations] = useState([]);
+  const [locationsLoading, setLocationsLoading] = useState(true);
+  const [locationsError, setLocationsError] = useState(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress(p => Math.min(p + 0.05, 99.9));
-      setFilesScanned(f => f + Math.floor(Math.random() * 50 + 20));
-    }, 1500);
-    return () => clearInterval(interval);
+    let cancelled = false;
+    let timeoutId;
+
+    async function poll() {
+      try {
+        const data = await getIndexStatus();
+        if (cancelled) return;
+        setStatus(data);
+        setStatusError(null);
+      } catch (err) {
+        if (!cancelled) setStatusError(err.message);
+      } finally {
+        if (!cancelled) {
+          const delay = status?.state === "running" ? 1500 : 2000;
+          timeoutId = setTimeout(poll, delay);
+        }
+      }
+    }
+
+    poll();
+    return () => { cancelled = true; clearTimeout(timeoutId); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status?.state]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLocations() {
+      try {
+        setLocationsLoading(true);
+        setLocationsError(null);
+        const data = await getIndexedLocations();
+        if (!cancelled) setLocations(data);
+      } catch (err) {
+        if (!cancelled) setLocationsError(err.message);
+      } finally {
+        if (!cancelled) setLocationsLoading(false);
+      }
+    }
+
+    loadLocations();
+    return () => { cancelled = true; };
   }, []);
 
-  const changeIcons = { Added: FilePlus, Modified: FileEdit, Deleted: FileMinus, Moved: FileOutput };
-  const changeColors = {
-    Added: "text-emerald-500 bg-emerald-500/10",
-    Modified: "text-blue-500 bg-blue-500/10",
-    Deleted: "text-rose-500 bg-rose-500/10",
-    Moved: "text-amber-500 bg-amber-500/10",
-  };
-  const locStatusColor = {
-    Indexed: "bg-emerald-500",
-    Indexing: "bg-amber-500 animate-pulse",
-    Queued: "bg-muted-foreground",
-  };
+  const state = status?.state ?? "idle";
+  const filesProcessed = status?.filesProcessed ?? 0;
+  const totalFiles = status?.totalFiles;
+  const progress = totalFiles ? Math.min((filesProcessed / totalFiles) * 100, 100) : null;
 
   return (
     <div className="p-6 lg:p-8 max-w-[1400px] mx-auto animate-fade-in">
@@ -39,12 +85,16 @@ export default function IndexStatus() {
         title="Index Status"
         subtitle="Live monitoring of your file indexing engine."
         actions={
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Indexing</span>
+          <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-lg border", STATE_COLORS[state])}>
+            <span className={cn("w-2 h-2 rounded-full", state === "running" ? "bg-amber-500 animate-pulse" : state === "completed" ? "bg-emerald-500" : state === "failed" ? "bg-rose-500" : "bg-muted-foreground")} />
+            <span className="text-sm font-medium">{STATE_LABELS[state]}</span>
           </div>
         }
       />
+
+      {statusError && (
+        <div className="mb-6 text-sm text-rose-500">{statusError}</div>
+      )}
 
       {/* Progress hero */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
@@ -55,34 +105,45 @@ export default function IndexStatus() {
               <Activity className="w-6 h-6 text-white" />
             </div>
             <div>
-              <div className="text-sm font-semibold">Current scan in progress</div>
-              <div className="text-xs text-muted-foreground font-mono truncate max-w-[300px]">{indexStatusData.currentScan}</div>
+              <div className="text-sm font-semibold">
+                {state === "running" ? "Scan in progress" : state === "completed" ? "Last scan completed" : state === "failed" ? "Last scan failed" : "No active scan"}
+              </div>
+              <div className="text-xs text-muted-foreground font-mono truncate max-w-[300px]">
+                {status?.path || "—"}
+              </div>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-semibold tabular-nums">{progress.toFixed(1)}%</div>
-            <div className="text-xs text-muted-foreground">complete</div>
+          {progress !== null ? (
+            <div className="text-right">
+              <div className="text-3xl font-semibold tabular-nums">{progress.toFixed(1)}%</div>
+              <div className="text-xs text-muted-foreground">complete</div>
+            </div>
+          ) : (
+            <div className="text-right">
+              <div className="text-3xl font-semibold tabular-nums">{filesProcessed.toLocaleString()}</div>
+              <div className="text-xs text-muted-foreground">files processed</div>
+            </div>
+          )}
+        </div>
+        {progress !== null && (
+          <div className="h-2.5 rounded-full bg-muted overflow-hidden mb-2">
+            <motion.div
+              className="h-full bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full"
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.5 }}
+            />
           </div>
-        </div>
-        <div className="h-2.5 rounded-full bg-muted overflow-hidden mb-2">
-          <motion.div
-            className="h-full bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full"
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.5 }}
-          />
-        </div>
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{filesScanned.toLocaleString()} / {indexStatusData.totalFiles.toLocaleString()} files</span>
-          <span>{indexStatusData.queue.toLocaleString()} remaining</span>
-        </div>
+        )}
+        {status?.error && (
+          <div className="text-xs text-rose-500 mt-2">{status.error}</div>
+        )}
       </motion.div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <MetricCard icon={FileStack} label="Files scanned" value={filesScanned.toLocaleString()} color="violet" />
-        <MetricCard icon={FolderOpen} label="In queue" value={indexStatusData.queue.toLocaleString()} color="amber" />
-        <MetricCard icon={Zap} label="Scan speed" value={`${indexStatusData.speed.toLocaleString()}/min`} color="emerald" />
-        <MetricCard icon={Clock} label="ETA" value={indexStatusData.eta} color="blue" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <MetricCard icon={FileStack} label="Files processed" value={filesProcessed.toLocaleString()} color="violet" />
+        <MetricCard icon={Clock} label="Started" value={status?.startedAt ? new Date(status.startedAt).toLocaleTimeString() : "—"} color="blue" />
+        <MetricCard icon={CheckCircle2} label="Completed" value={status?.completedAt ? new Date(status.completedAt).toLocaleTimeString() : "—"} color="emerald" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -91,63 +152,32 @@ export default function IndexStatus() {
           <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold">Indexed Locations</h3>
-              <p className="text-xs text-muted-foreground">{indexedLocations.length} folders monitored</p>
+              <p className="text-xs text-muted-foreground">{locations.length} folders monitored</p>
             </div>
-            <button className="flex items-center gap-1 px-2.5 h-7 rounded-lg bg-muted hover:bg-muted/70 text-xs font-medium transition-colors">
-              <Plus className="w-3.5 h-3.5" /> Add
-            </button>
           </div>
-          <div className="divide-y divide-border/50">
-            {indexedLocations.map(loc => (
-              <div key={loc.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/30 transition-colors group">
-                <span className={cn("w-2 h-2 rounded-full shrink-0", locStatusColor[loc.status])} />
-                <FolderOpen className="w-4 h-4 text-muted-foreground shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-mono truncate">{loc.path}</div>
-                  <div className="text-xs text-muted-foreground">{loc.files.toLocaleString()} files · {loc.size}</div>
-                </div>
-                <span className={cn("text-xs font-medium px-2 py-0.5 rounded-md", loc.status === "Indexed" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : loc.status === "Indexing" ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" : "bg-muted text-muted-foreground")}>
-                  {loc.status}
-                </span>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground">
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
-                  <button className="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-rose-500">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent changes */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-border">
-            <h3 className="text-sm font-semibold">Recent Changes</h3>
-            <p className="text-xs text-muted-foreground">Live file system events</p>
-          </div>
-          <div className="divide-y divide-border/50 max-h-[400px] overflow-y-auto">
-            {indexStatusData.recentChanges.map(change => {
-              const Icon = changeIcons[change.action];
-              return (
-                <div key={change.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/30 transition-colors">
-                  <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0", changeColors[change.action])}>
-                    <Icon className="w-3.5 h-3.5" />
-                  </div>
+          {locationsLoading ? (
+            <div className="flex items-center justify-center py-8 text-muted-foreground text-sm gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading locations…
+            </div>
+          ) : locationsError ? (
+            <div className="text-sm text-rose-500 px-5 py-4">{locationsError}</div>
+          ) : locations.length === 0 ? (
+            <div className="text-sm text-muted-foreground px-5 py-4">No indexed locations yet. Add one from Settings.</div>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {locations.map(loc => (
+                <div key={loc.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/30 transition-colors group">
+                  <FolderOpen className="w-4 h-4 text-muted-foreground shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm truncate">
-                      <span className="font-medium">{change.action}</span>{" "}
-                      <span className="text-muted-foreground">{change.file}</span>
+                    <div className="text-sm font-mono truncate">{loc.path}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {loc.lastIndexedAt ? `Last indexed ${new Date(loc.lastIndexedAt).toLocaleString()}` : "Not indexed yet"}
                     </div>
-                    <div className="text-xs text-muted-foreground font-mono truncate">{change.path}</div>
                   </div>
-                  <div className="text-xs text-muted-foreground shrink-0">{change.time}</div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

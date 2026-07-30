@@ -1,11 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
   FolderOpen, Gauge, Database, Palette, ShieldCheck, HardDrive,
-  Plus, Trash2, Sun, Moon, Zap, Lock, RefreshCw
+  Plus, Trash2, Sun, Moon, Zap, Lock, RefreshCw, Loader2, Play
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
-import { indexedLocations } from "@/lib/mockData";
+import { getIndexedLocations, addIndexedLocation, removeIndexedLocation, startIndexing } from "@/lib/api";
 import { useTheme } from "@/lib/ThemeContext";
 import { cn } from "@/lib/utils";
 
@@ -19,12 +20,81 @@ const sections = [
 ];
 
 export default function Settings() {
+  const navigate = useNavigate();
   const [active, setActive] = useState("locations");
   const { theme, toggleTheme } = useTheme();
   const [perfMode, setPerfMode] = useState("balanced");
   const [autoScan, setAutoScan] = useState(true);
   const [encrypt, setEncrypt] = useState(true);
   const [twofa, setTwofa] = useState(false);
+
+  const [locations, setLocations] = useState([]);
+  const [locationsLoading, setLocationsLoading] = useState(true);
+  const [locationsError, setLocationsError] = useState(null);
+  const [newPath, setNewPath] = useState("");
+  const [addError, setAddError] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [indexingId, setIndexingId] = useState(null);
+  const [indexError, setIndexError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLocations() {
+      try {
+        setLocationsLoading(true);
+        setLocationsError(null);
+        const data = await getIndexedLocations();
+        if (!cancelled) setLocations(data);
+      } catch (err) {
+        if (!cancelled) setLocationsError(err.message);
+      } finally {
+        if (!cancelled) setLocationsLoading(false);
+      }
+    }
+
+    loadLocations();
+    return () => { cancelled = true; };
+  }, []);
+
+  async function handleAddLocation() {
+    const cleanedPath = newPath.trim().replace(/^["']|["']$/g, "").trim();
+    if (!cleanedPath) return;
+    try {
+      setAdding(true);
+      setAddError(null);
+      const location = await addIndexedLocation({ path: cleanedPath });
+      setLocations(prev => [...prev, location]);
+      setNewPath("");
+    } catch (err) {
+      setAddError(err.message);
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleRemoveLocation(id) {
+    try {
+      await removeIndexedLocation(id);
+      setLocations(prev => prev.filter(loc => loc.id !== id));
+    } catch (err) {
+      setLocationsError(err.message);
+    }
+  }
+
+  async function handleIndexNow(loc) {
+    if (indexingId) return;
+    try {
+      setIndexingId(loc.id);
+      setIndexError(null);
+      await startIndexing(loc.path);
+      navigate("/index-status");
+    } catch (err) {
+      setIndexError(err.message);
+    } finally {
+      setIndexingId(null);
+    }
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-[1400px] mx-auto animate-fade-in">
@@ -56,23 +126,74 @@ export default function Settings() {
           <motion.div key={active} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
             {active === "locations" && (
               <Card title="Indexed Locations" desc="Folders that FileManager AI monitors and indexes.">
-                <div className="divide-y divide-border/50">
-                  {indexedLocations.map(loc => (
-                    <div key={loc.id} className="flex items-center gap-3 py-3">
-                      <FolderOpen className="w-4.5 h-4.5 text-muted-foreground shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-mono truncate">{loc.path}</div>
-                        <div className="text-xs text-muted-foreground">{loc.files.toLocaleString()} files · {loc.size}</div>
-                      </div>
-                      <button className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-rose-500">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+                {locationsLoading ? (
+                  <div className="flex items-center justify-center py-8 text-muted-foreground text-sm gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading locations…
+                  </div>
+                ) : locationsError ? (
+                  <div className="text-sm text-rose-500 py-4">{locationsError}</div>
+                ) : locations.length === 0 ? (
+                  <div className="text-sm text-muted-foreground py-4">No indexed locations yet.</div>
+                ) : (
+                  <div className="divide-y divide-border/50">
+                    {locations.map(loc => {
+                      const isIndexingThis = indexingId === loc.id;
+                      const disableRow = indexingId !== null;
+                      return (
+                        <div key={loc.id} className="flex items-center gap-3 py-3">
+                          <FolderOpen className="w-4.5 h-4.5 text-muted-foreground shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-mono truncate">{loc.path}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {loc.lastIndexedAt ? `Last indexed ${new Date(loc.lastIndexedAt).toLocaleString()}` : "Not indexed yet"}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleIndexNow(loc)}
+                            disabled={disableRow}
+                            className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg border border-border hover:border-violet-500 hover:text-violet-500 text-xs font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none shrink-0"
+                          >
+                            {isIndexingThis ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Starting…
+                              </>
+                            ) : (
+                              <>
+                                <Play className="w-3.5 h-3.5" /> Index now
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleRemoveLocation(loc.id)}
+                            disabled={disableRow}
+                            className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-rose-500 disabled:opacity-50 disabled:pointer-events-none shrink-0"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {indexError && <div className="text-xs text-rose-500 mt-2">{indexError}</div>}
+                <div className="mt-4 space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      value={newPath}
+                      onChange={e => setNewPath(e.target.value)}
+                      placeholder="D:\SomeFolder"
+                      className="flex-1 h-9 px-3 rounded-lg border border-border bg-background text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                    />
+                    <button
+                      onClick={handleAddLocation}
+                      disabled={adding || !newPath.trim()}
+                      className="flex items-center gap-2 px-3 h-9 rounded-lg border border-dashed border-border hover:border-violet-500 hover:text-violet-500 text-sm font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Add location
+                    </button>
+                  </div>
+                  {addError && <div className="text-xs text-rose-500">{addError}</div>}
                 </div>
-                <button className="mt-4 flex items-center gap-2 px-3 h-9 rounded-lg border border-dashed border-border hover:border-violet-500 hover:text-violet-500 text-sm font-medium transition-colors w-full justify-center">
-                  <Plus className="w-4 h-4" /> Add location
-                </button>
               </Card>
             )}
 

@@ -2,6 +2,8 @@ namespace FileManager.Application.Dtos;
 
 public class FileResultDto
 {
+    public string Id { get; set; } = "";
+
     public string FullPath { get; set; } = "";
 
     public string Name { get; set; } = "";
@@ -13,4 +15,6 @@ public class FileResultDto
     public DateTime LastModified { get; set; }
 
     public string Hash { get; set; } = "";
+
+    public string Type { get; set; } = "";
 }
