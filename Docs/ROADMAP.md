@@ -1,11 +1,13 @@
-# FileManager — Roadmap
+# FileManager â€” Roadmap
 
 ## Principle
 
-FileManager is a local desktop file management application. Its goal is to help users rediscover,
-organize, and manage their files without changing their physical folder structure.
+FileManager is a local-first file management application.
 
-The roadmap reflects the development priorities defined in the [PRD](PRD.md):
+Its goal is to help users rediscover, organize, and manage their files without requiring them to
+change the physical folder structure on disk.
+
+The roadmap reflects the priorities defined in the [PRD](PRD.md):
 
 1. Reliable indexing engine
 2. Rich metadata extraction
@@ -16,78 +18,255 @@ The roadmap reflects the development priorities defined in the [PRD](PRD.md):
 7. Thumbnail generation
 8. AI enrichment
 
-**Search is an enabling capability, not the product goal.** Fast, accurate search is part of the
-infrastructure that powers browsing, organization, and discovery — not the end product itself.
+**Search is an enabling capability, not the product goal.**
 
-**No roadmap item may introduce automatic modification of physical user files.** Every operation
-that affects files on disk must remain an explicit, user-initiated action with confirmation.
+Fast and accurate metadata search supports browsing, organization, and discovery, but the defining
+product value is the virtual organization layer built around the user's existing filesystem.
 
----
+**No roadmap item may introduce automatic modification of physical user files.**
 
-## Phase 1 — Foundation
-
-Goal: a stable, reliable metadata index that tracks the local filesystem.
-
-- Reliable initial indexing and change monitoring separation
-- Stable metadata schema and persistence (SQLite)
-- Filesystem synchronization (created, modified, deleted, renamed events)
-- Basic virtual folders and tags
-- Hash-based file identity for duplicate detection groundwork
+Any future operation that affects files on disk must remain explicit, user-initiated, and clearly confirmed.
 
 ---
 
-## Phase 2 — Organization Features
+## Current Implementation Snapshot
 
-Goal: the virtual organization layer that lets users organize files without moving them.
+The following capabilities are already present in the current architecture:
 
-- Virtual folders — one physical file in multiple logical locations
-- Multi-folder logical association for a single file
-- Collections and albums — named, curated groupings
-- Smart collections — rule-based groupings driven by metadata
-- Duplicate detection pipeline — identification only; user decides on action
-- Photo-library oriented metadata improvements (EXIF, capture date, camera model)
+- Local SQLite metadata persistence
+- Initial indexing
+- Incremental filesystem monitoring
+- File metadata and SHA-256 hashing
+- Hash reuse for unchanged files
+- Search over indexed metadata
+- Duplicate detection and reporting
+- Dashboard/application summary data
+- Indexed locations
+- Index orchestration/status services
+- Virtual-folder persistence
+- Nested virtual folders
+- Virtual-folder file membership
+- React client
+- HTTP API between React and the .NET application
 
----
+The current implementation focus is completing the persisted Virtual Explorer experience in the React client.
 
-## Phase 3 — Browsing and Discovery
+This snapshot is intentionally high-level.
 
-Goal: timeline-based browsing and rich metadata-driven navigation.
-
-- Timeline-based browsing — browse files by capture date or last-modified date
-- Thumbnail generation — background preview generation (read-only on source files)
-- Metadata-driven filtering and browsing
-- Performance: replaceable indexing strategies behind Core contracts
-- Performance: background workers for hashing and thumbnail generation
-- Performance: incremental update optimizations
-- Memory/cache access layer for frequent queries
-
----
-
-## Phase 4 — Advanced Engine Capabilities
-
-Goal: operational maturity and extensibility for the long-term vision.
-
-- Collection and query engine enhancements
-- Thumbnail cache lifecycle management
-- Operational diagnostics and resilience improvements
-- Search as a first-class navigation surface (powered by the metadata index)
+Detailed implementation state should be determined from the codebase, tests, and active issues rather than
+using this roadmap as a task tracker.
 
 ---
 
-## Phase 5 — AI Enrichment (Future Vision)
+## Phase 1 â€” Foundation
 
-Goal: transform the library into an intelligent personal file archive.
+**Goal:** a stable, reliable local metadata index that tracks the filesystem.
 
-All AI features are an **optional, additive, read-only metadata layer**. AI analysis reads file
-content and writes only to the application's metadata store. No AI feature may modify, move,
-rename, or delete physical files.
+Key capabilities:
 
-- Automatic categorization of files by inferred type, subject, or event
-- Object recognition — tagging photos by content
-- Face recognition — identifying people across photos (with user confirmation)
-- OCR — extracting searchable text from scanned documents and images
-- Semantic search — finding files by meaning rather than filename
-- Smart collections powered by AI-generated metadata
+- Reliable initial indexing
+- Clear separation between initial indexing and incremental monitoring
+- Stable metadata schema
+- SQLite persistence
+- Filesystem synchronization for:
+  - created files
+  - modified files
+  - deleted files
+  - renamed or moved files
+- Hash-based file identity and duplicate-detection groundwork
+- Replaceable indexing source abstraction
+- Indexed-root persistence
 
-See [PRD — Future Vision](PRD.md#future-vision--intelligent-personal-file-library) for the full
-description of AI principles and constraints.
+The filesystem remains the source of truth for physical files.
+
+---
+
+## Phase 2 â€” Virtual Organization
+
+**Goal:** allow users to organize files logically without moving them physically.
+
+Key capabilities:
+
+- Nested virtual folders
+- One physical file in multiple logical locations
+- Persistent virtual-folder membership
+- Explorer-like browsing
+- Physical-location visibility alongside virtual organization
+- Safe metadata-only create, rename, move, and delete operations
+- Virtual-folder membership management
+
+This phase is central to the product's differentiation.
+
+A virtual folder must never be treated as a physical directory.
+
+---
+
+## Phase 3 â€” Browsing and Discovery
+
+**Goal:** make indexed files easy to rediscover through multiple meaningful views.
+
+Planned capabilities:
+
+- Timeline-based browsing
+- Date-oriented navigation
+- Recent files
+- Favorites
+- Metadata-driven filtering
+- Improved navigation around virtual organization
+- Richer file properties and contextual views
+
+Search continues to support these experiences rather than replace them.
+
+---
+
+## Phase 4 â€” Collections and Media Experience
+
+**Goal:** provide richer ways to organize and browse visual and curated content.
+
+Planned capabilities:
+
+- Collections
+- Albums
+- Photo-oriented views
+- Thumbnail generation
+- Thumbnail cache
+- Image metadata improvements
+- Capture-date and media metadata support
+
+All generated previews and metadata remain application-owned.
+
+Source files remain unchanged.
+
+---
+
+## Phase 5 â€” Performance and Operational Maturity
+
+**Goal:** improve scalability, indexing performance, resilience, and maintainability.
+
+Potential work includes:
+
+- Faster Windows-specific indexing sources
+- NTFS/MFT-based enumeration behind `IIndexSource`
+- Incremental indexing optimizations
+- Background work coordination
+- Hashing optimizations
+- Query performance improvements
+- Cache strategy
+- Operational diagnostics
+- Recovery from interrupted indexing
+- Better handling of large file libraries
+
+Performance improvements must preserve existing architectural boundaries.
+
+---
+
+## Phase 6 â€” Advanced Organization
+
+**Goal:** extend the virtual organization model beyond folders.
+
+Potential capabilities:
+
+- Tags
+- File-tag relationships
+- Curated collections
+- Rule-based collections
+- Smart collections
+- Saved metadata filters
+
+These features should follow the same model as virtual folders:
+
+```text
+FileEntry
+    |
+    +---- application-owned metadata
+````
+
+They must not require moving or duplicating physical files.
+
+---
+
+## Phase 7 â€” AI Enrichment
+
+**Goal:** add an optional intelligent metadata layer on top of the existing index.
+
+Potential capabilities:
+
+* Automatic categorization
+* OCR
+* Semantic search
+* Content-based labels
+* Image understanding
+* Smart collections based on derived metadata
+
+AI enrichment must remain:
+
+* optional
+* additive
+* explainable where practical
+* user-controlled
+* read-only with respect to physical files
+
+AI may write derived metadata only to FileManager-owned storage.
+
+---
+
+## Product Priority Order
+
+When choosing between competing features, prefer work that strengthens:
+
+```text
+1. Reliability
+2. Data safety
+3. Virtual organization
+4. Browsing and rediscovery
+5. Performance
+6. Rich metadata
+7. Advanced automation
+8. AI enrichment
+```
+
+A feature that weakens filesystem safety or makes the architecture harder to maintain should not be accepted
+simply because it appears useful.
+
+---
+
+## What the Roadmap Is Not
+
+This document is not:
+
+* a sprint board
+* an issue tracker
+* a release checklist
+* a source of exact implementation status
+
+Those belong in GitHub Issues, project boards, and code/tests.
+
+The roadmap defines product and architectural direction.
+
+---
+
+## Long-Term Vision
+
+The long-term goal is an intelligent personal file library that sits above the native filesystem.
+
+Users should be able to understand the same physical file through multiple logical views:
+
+```text
+Physical File
+    |
+    v
+Indexed Metadata
+    |
+    +---- Virtual Folders
+    +---- Timeline
+    +---- Collections
+    +---- Tags
+    +---- Search
+    +---- Duplicate Analysis
+    +---- Thumbnails
+    +---- Future AI Metadata
+```
+
+The filesystem remains intact throughout.
+
+FileManager adds organization and understanding without taking control away from the user.
