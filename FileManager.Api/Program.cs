@@ -145,6 +145,130 @@ app.MapGet("/api/index/status", (IIndexStatusService statusService) =>
     return Results.Ok(status);
 });
 
+app.MapGet("/api/virtual-folders", async (IVirtualFolderAppService virtualFolderService) =>
+{
+    var tree = await virtualFolderService.GetTreeAsync();
+    return Results.Ok(tree);
+});
+
+app.MapGet("/api/virtual-folders/{id:guid}", async (Guid id, IVirtualFolderAppService virtualFolderService) =>
+{
+    var folder = await virtualFolderService.GetByIdAsync(id);
+    return folder is null ? Results.NotFound() : Results.Ok(folder);
+});
+
+app.MapPost("/api/virtual-folders", async (CreateVirtualFolderDto dto, IVirtualFolderAppService virtualFolderService) =>
+{
+    var result = await virtualFolderService.CreateAsync(dto);
+
+    if (!result.Success)
+    {
+        if (result.IsConflict)
+        {
+            return Results.Conflict(new { error = result.ErrorMessage });
+        }
+
+        if (result.IsNotFound)
+        {
+            return Results.NotFound(new { error = result.ErrorMessage });
+        }
+
+        return Results.BadRequest(new { error = result.ErrorMessage });
+    }
+
+    return Results.Ok(result.Folder);
+});
+
+app.MapPatch("/api/virtual-folders/{id:guid}", async (Guid id, UpdateVirtualFolderDto dto, IVirtualFolderAppService virtualFolderService) =>
+{
+    var result = await virtualFolderService.UpdateAsync(id, dto);
+
+    if (!result.Success)
+    {
+        if (result.IsConflict)
+        {
+            return Results.Conflict(new { error = result.ErrorMessage });
+        }
+
+        if (result.IsNotFound)
+        {
+            return Results.NotFound(new { error = result.ErrorMessage });
+        }
+
+        return Results.BadRequest(new { error = result.ErrorMessage });
+    }
+
+    return Results.Ok(result.Folder);
+});
+
+app.MapDelete("/api/virtual-folders/{id:guid}", async (Guid id, IVirtualFolderAppService virtualFolderService) =>
+{
+    var result = await virtualFolderService.DeleteAsync(id);
+
+    if (!result.Success)
+    {
+        if (result.IsConflict)
+        {
+            return Results.Conflict(new { error = result.ErrorMessage });
+        }
+
+        if (result.IsNotFound)
+        {
+            return Results.NotFound(new { error = result.ErrorMessage });
+        }
+
+        return Results.BadRequest(new { error = result.ErrorMessage });
+    }
+
+    return Results.NoContent();
+});
+
+app.MapGet("/api/virtual-folders/{id:guid}/files", async (Guid id, IVirtualFolderAppService virtualFolderService) =>
+{
+    var files = await virtualFolderService.GetFilesInFolderAsync(id);
+    return Results.Ok(files);
+});
+
+app.MapPost("/api/virtual-folders/{id:guid}/files", async (Guid id, AddVirtualFolderFileDto dto, IVirtualFolderAppService virtualFolderService) =>
+{
+    var result = await virtualFolderService.AddFileAsync(id, dto.FileId);
+
+    if (!result.Success)
+    {
+        if (result.IsNotFound)
+        {
+            return Results.NotFound(new { error = result.ErrorMessage });
+        }
+
+        return Results.BadRequest(new { error = result.ErrorMessage });
+    }
+
+    return Results.Ok();
+});
+
+app.MapDelete("/api/virtual-folders/{id:guid}/files/{fileId:guid}", async (Guid id, Guid fileId, IVirtualFolderAppService virtualFolderService) =>
+{
+    var result = await virtualFolderService.RemoveFileAsync(id, fileId);
+
+    if (!result.Success)
+    {
+        if (result.IsNotFound)
+        {
+            return Results.NotFound(new { error = result.ErrorMessage });
+        }
+
+        return Results.BadRequest(new { error = result.ErrorMessage });
+    }
+
+    return Results.NoContent();
+});
+
+app.MapGet("/api/files/{fileId:guid}/virtual-folders", async (Guid fileId, IVirtualFolderAppService virtualFolderService) =>
+{
+    var folders = await virtualFolderService.GetFoldersForFileAsync(fileId);
+    return Results.Ok(folders);
+});
+
 app.Run();
 
 public record IndexRequestDto(string Path);

@@ -20,6 +20,8 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IFileRepository, FileRepository>();
         services.AddScoped<IIndexedRootRepository, IndexedRootRepository>();
+        services.AddScoped<IVirtualFolderRepository, VirtualFolderRepository>();
+        services.AddScoped<IVirtualFolderFileRepository, VirtualFolderFileRepository>();
         services.AddScoped<IFileScanner, FileScanner>();
         services.AddScoped<IIndexSource, FileSystemIndexSource>();
         services.AddScoped<IFileEntryFactory, FileEntryFactory>();
