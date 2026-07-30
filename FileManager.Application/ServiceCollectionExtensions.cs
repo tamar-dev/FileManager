@@ -10,6 +10,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IIndexingAppService, IndexingAppService>();
         services.AddScoped<IDuplicateAppService, DuplicateAppService>();
         services.AddScoped<IDashboardAppService, DashboardAppService>();
+        services.AddScoped<ISearchAppService, SearchAppService>();
+        services.AddScoped<IIndexedLocationAppService, IndexedLocationAppService>();
+        services.AddScoped<IVirtualFolderAppService, VirtualFolderAppService>();
+        services.AddSingleton<IIndexStatusService, IndexStatusService>();
+        services.AddSingleton<IIndexingOrchestrationAppService, IndexingOrchestrationAppService>();
 
         return services;
     }

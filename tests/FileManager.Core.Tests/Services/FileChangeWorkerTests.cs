@@ -48,6 +48,9 @@ public class FileChangeWorkerTests
         public Task<FileEntry?> GetByPathAsync(string fullPath) =>
             Task.FromResult(_files.TryGetValue(fullPath, out var entry) ? entry : null);
 
+        public Task<FileEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult(_files.Values.FirstOrDefault(f => f.Id == id));
+
         public Task<IReadOnlyList<FileEntry>> GetByPathsAsync(IReadOnlyCollection<string> fullPaths, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<FileEntry>>(
                 _files.Values.Where(f => fullPaths.Contains(f.FullPath)).ToList());

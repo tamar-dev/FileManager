@@ -1,6 +1,5 @@
 ﻿using FileManager.Cli.Commands;
 using FileManager.Application;
-using FileManager.Cli.Commands;
 using FileManager.Infrastructure;
 using FileManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +11,7 @@ if (args.Length == 0)
     Console.WriteLine("  index <path>");
     Console.WriteLine("  watch <path>");
     Console.WriteLine("  duplicates");
+    Console.WriteLine("  dashboard");
     Console.WriteLine("  search [--name x] [--ext x] [--path x] [--after date] [--before date]");
     return;
 }
@@ -24,6 +24,8 @@ services.AddTransient<IndexCommand>();
 services.AddTransient<WatchCommand>();
 services.AddTransient<DuplicatesCommand>();
 services.AddTransient<SearchCommand>();
+//services.AddTransient<SearchCommand>();
+services.AddTransient<DashboardCommand>();
 
 await using var provider = services.BuildServiceProvider();
 
@@ -87,6 +89,17 @@ switch (args[0].ToLowerInvariant())
             var searchCommand = scope.ServiceProvider.GetRequiredService<SearchCommand>();
 
             await searchCommand.ExecuteAsync(args.Skip(1).ToArray());
+
+            break;
+        }
+
+    case "dashboard":
+        {
+            using var scope = provider.CreateScope();
+
+            var dashboardCommand = scope.ServiceProvider.GetRequiredService<DashboardCommand>();
+
+            await dashboardCommand.ExecuteAsync();
 
             break;
         }

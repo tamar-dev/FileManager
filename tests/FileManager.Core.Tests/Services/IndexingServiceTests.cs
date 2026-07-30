@@ -46,6 +46,8 @@ public class IndexingServiceTests
 
         public Task<FileEntry?> GetByPathAsync(string fullPath) => Task.FromResult<FileEntry?>(null);
 
+        public Task<FileEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult<FileEntry?>(null);
+
         public Task<IReadOnlyList<FileEntry>> GetByPathsAsync(IReadOnlyCollection<string> fullPaths, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<FileEntry>>(new List<FileEntry>());
     }

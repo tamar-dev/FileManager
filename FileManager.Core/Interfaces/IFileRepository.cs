@@ -16,6 +16,8 @@ public interface IFileRepository
 
     Task<FileEntry?> GetByPathAsync(string fullPath);
 
+    Task<FileEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<FileEntry>> GetByPathsAsync(
         IReadOnlyCollection<string> fullPaths,
         CancellationToken cancellationToken = default);

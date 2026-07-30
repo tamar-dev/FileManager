@@ -1,6 +1,5 @@
 ﻿using FileManager.Core.Entities;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
 
 namespace FileManager.Infrastructure.Persistence;
 
@@ -8,25 +7,30 @@ public class FileManagerDbContext : DbContext
 {
     public DbSet<FileEntry> Files => Set<FileEntry>();
 
+    public DbSet<IndexedRoot> IndexedRoots => Set<IndexedRoot>();
+
+    public DbSet<VirtualFolder> VirtualFolders => Set<VirtualFolder>();
+
+    public DbSet<VirtualFolderFile> VirtualFolderFiles => Set<VirtualFolderFile>();
+
     public FileManagerDbContext(
-      DbContextOptions<FileManagerDbContext> options)
-      : base(options)
+        DbContextOptions<FileManagerDbContext> options)
+        : base(options)
     {
     }
 
-    protected override void OnConfiguring(
-    DbContextOptionsBuilder optionsBuilder)
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        if (optionsBuilder.IsConfigured)
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<VirtualFolder>(entity =>
         {
-            return;
-        }
+            entity.HasIndex(f => new { f.ParentId, f.Name });
+        });
 
-        var dbPath = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "filemanager.db");
-
-        optionsBuilder.UseSqlite(
-            $"Data Source={dbPath}");
+        modelBuilder.Entity<VirtualFolderFile>(entity =>
+        {
+            entity.HasIndex(f => new { f.VirtualFolderId, f.FileEntryId }).IsUnique();
+        });
     }
 }
