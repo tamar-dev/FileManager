@@ -25,7 +25,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFileScanner, FileScanner>();
         services.AddScoped<IIndexSource, FileSystemIndexSource>();
         services.AddScoped<IFileEntryFactory, FileEntryFactory>();
+        services.AddScoped<FileHasher>();
         services.AddScoped<InitialIndexingService>();
+        services.AddScoped<HashEnrichmentService>();
 
         return services;
     }
