@@ -24,6 +24,17 @@ public class IndexingServiceTests
             CallCount++;
             throw _exception;
         }
+        public Task<FileEntry> CreateMetadataAsync(string fullPath, FileEntry? existingEntry = null)
+        {
+            return Task.FromResult(
+                existingEntry ?? new FileEntry
+                {
+                    FullPath = fullPath,
+                    Name = Path.GetFileName(fullPath),
+                    Extension = Path.GetExtension(fullPath),
+                    IndexedAt = DateTime.UtcNow
+                });
+        }
     }
 
     private sealed class FakeRepository : IFileRepository

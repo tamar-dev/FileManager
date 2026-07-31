@@ -1,17 +1,20 @@
 using FileManager.Application.Dtos;
 using FileManager.Core.Interfaces;
+using FileManager.Core.Services;
 
 namespace FileManager.Application.Services;
 
 public class IndexingAppService : IIndexingAppService
 {
-    private readonly IFileScanner _scanner;
-    private readonly IFileRepository _repository;
+    private readonly InitialIndexingService _initialIndexingService;
+    private readonly IIndexedRootRepository _indexedRootRepository;
 
-    public IndexingAppService(IFileScanner scanner, IFileRepository repository)
+    public IndexingAppService(
+        InitialIndexingService initialIndexingService,
+        IIndexedRootRepository indexedRootRepository)
     {
-        _scanner = scanner;
-        _repository = repository;
+        _initialIndexingService = initialIndexingService;
+        _indexedRootRepository = indexedRootRepository;
     }
 
     public async Task<IndexingResultDto> IndexDirectoryAsync(
@@ -19,20 +22,17 @@ public class IndexingAppService : IIndexingAppService
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var filesIndexed = 0;
-
         try
         {
-            foreach (var entry in _scanner.Scan(path))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
+            var filesIndexed =
+                await _initialIndexingService.IndexDirectoryAsync(
+                    path,
+                    progress,
+                    cancellationToken);
 
-                await _repository.UpsertAsync(entry);
-
-                filesIndexed++;
-
-                progress?.Report(entry.FullPath);
-            }
+            await MarkIndexedAsync(
+                path,
+                cancellationToken);
 
             return new IndexingResultDto
             {
@@ -46,7 +46,7 @@ public class IndexingAppService : IIndexingAppService
             return new IndexingResultDto
             {
                 Path = path,
-                FilesIndexed = filesIndexed,
+                FilesIndexed = 0,
                 Success = false,
                 ErrorMessage = "Indexing was cancelled."
             };
@@ -56,10 +56,34 @@ public class IndexingAppService : IIndexingAppService
             return new IndexingResultDto
             {
                 Path = path,
-                FilesIndexed = filesIndexed,
+                FilesIndexed = 0,
                 Success = false,
                 ErrorMessage = ex.Message
             };
         }
+    }
+
+    private async Task MarkIndexedAsync(
+        string path,
+        CancellationToken cancellationToken)
+    {
+        var normalizedPath = PathNormalizer.Normalize(path);
+
+        var root =
+            await _indexedRootRepository
+                .GetByNormalizedPathAsync(
+                    normalizedPath,
+                    cancellationToken);
+
+        if (root is null)
+        {
+            return;
+        }
+
+        root.LastIndexedAt = DateTime.UtcNow;
+
+        await _indexedRootRepository.UpdateAsync(
+            root,
+            cancellationToken);
     }
 }

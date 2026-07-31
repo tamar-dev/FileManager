@@ -21,13 +21,17 @@ public class InitialIndexingService
         _fileEntryFactory = fileEntryFactory;
     }
 
-    public async Task IndexDirectoryAsync(
+    public async Task<int> IndexDirectoryAsync(
         string path,
+        IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
         var pendingPaths = new List<string>(BatchSize);
+        var filesIndexed = 0;
 
-        foreach (var filePath in _indexSource.EnumeratePaths(path, cancellationToken))
+        foreach (var filePath in _indexSource.EnumeratePaths(
+                     path,
+                     cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -35,47 +39,79 @@ public class InitialIndexingService
 
             if (pendingPaths.Count == BatchSize)
             {
-                await ProcessBatchAsync(pendingPaths, cancellationToken);
+                filesIndexed += await ProcessBatchAsync(
+                    pendingPaths,
+                    progress,
+                    cancellationToken);
+
                 pendingPaths.Clear();
             }
         }
 
         if (pendingPaths.Count > 0)
         {
-            await ProcessBatchAsync(pendingPaths, cancellationToken);
+            filesIndexed += await ProcessBatchAsync(
+                pendingPaths,
+                progress,
+                cancellationToken);
         }
+
+        return filesIndexed;
     }
 
-    private async Task ProcessBatchAsync(
+    private async Task<int> ProcessBatchAsync(
         IReadOnlyCollection<string> filePaths,
+        IProgress<string>? progress,
         CancellationToken cancellationToken)
     {
-        var existingEntries = await _repository.GetByPathsAsync(filePaths, cancellationToken);
-        var existingByPath = existingEntries.ToDictionary(entry => entry.FullPath, StringComparer.OrdinalIgnoreCase);
+        var existingEntries =
+            await _repository.GetByPathsAsync(
+                filePaths,
+                cancellationToken);
 
-        var batchEntries = new List<FileEntry>(filePaths.Count);
+        var existingByPath = existingEntries.ToDictionary(
+            entry => entry.FullPath,
+            StringComparer.OrdinalIgnoreCase);
+
+        var batchEntries =
+            new List<FileEntry>(filePaths.Count);
 
         foreach (var filePath in filePaths)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            existingByPath.TryGetValue(filePath, out var existingEntry);
+            existingByPath.TryGetValue(
+                filePath,
+                out var existingEntry);
 
             try
             {
-                var entry = await _fileEntryFactory.CreateAsync(filePath, existingEntry);
+                var entry =
+                     await _fileEntryFactory.CreateMetadataAsync(
+                         filePath,
+                         existingEntry);
+
                 batchEntries.Add(entry);
-                Console.WriteLine($"Indexed: {entry.FullPath}");
+
+                // Report only after the file was actually processed.
+                progress?.Report(entry.FullPath);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception ex)
+                when (ex is IOException or UnauthorizedAccessException)
             {
-                Console.WriteLine($"Skipping file '{filePath}': {ex.GetType().Name}: {ex.Message}");
+                Console.WriteLine(
+                    $"Skipping file '{filePath}': " +
+                    $"{ex.GetType().Name}: {ex.Message}");
             }
         }
 
         if (batchEntries.Count > 0)
         {
-            await _repository.UpsertBatchAsync(batchEntries, cancellationToken);
+            await _repository.UpsertBatchAsync(
+                batchEntries,
+                cancellationToken);
         }
+
+        return batchEntries.Count;
     }
 }
