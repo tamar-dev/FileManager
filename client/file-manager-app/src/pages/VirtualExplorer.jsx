@@ -23,7 +23,8 @@ import {
   deleteVirtualFolder,
   addFileToVirtualFolder,
   searchFiles,
-  removeFileFromVirtualFolder
+  removeFileFromVirtualFolder,
+  getFileVirtualFolders
 } from "@/lib/api";
 
 import { useToast } from "@/components/ui/use-toast";
@@ -45,7 +46,7 @@ export default function VirtualExplorer() {
   const [currentFolderId, setCurrentFolderId] = useState("root");
   const [history, setHistory] = useState(["root"]);
   const [historyIndex, setHistoryIndex] = useState(0);
-
+  const [activeFileFolders, setActiveFileFolders] = useState([]);
   const [expanded, setExpanded] = useState(new Set(["root"]));
   const [selectedIds, setSelectedIds] = useState([]);
 
@@ -140,7 +141,40 @@ export default function VirtualExplorer() {
       cancelled = true;
     };
   }, [currentFolderId, toast]);
+  useEffect(() => {
+    if (!activeFile?.id) {
+      setActiveFileFolders([]);
+      return;
+    }
 
+    let cancelled = false;
+
+    async function loadFileFolders() {
+      try {
+        const folders = await getFileVirtualFolders(activeFile.id);
+
+        if (!cancelled) {
+          setActiveFileFolders(folders ?? []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setActiveFileFolders([]);
+
+          toast({
+            title: "Could not load file folders",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+      }
+    }
+
+    loadFileFolders();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeFile?.id, toast]);
   const explorerFiles = useMemo(
     () =>
       folderFiles.map((file) => ({
@@ -520,293 +554,294 @@ export default function VirtualExplorer() {
     });
   };
 
-const handleFileAction = async (action) => {
-  const file = fileMenu?.file || activeFile;
+  const handleFileAction = async (action) => {
+    const file = fileMenu?.file || activeFile;
 
-  if (!file) {
-    return;
-  }
-
-  try {
-    if (action === "properties") {
-      setActiveFile(file);
-    } else if (action === "favorite") {
-      toast({
-        title: "Favorites are not connected yet",
-      });
-    } else if (action === "copy") {
-      await navigator.clipboard?.writeText(file.physicalPath);
-
-      toast({
-        title: "Physical path copied",
-      });
-    } else if (action === "rename") {
-      toast({
-        title: "Virtual rename is not connected yet",
-      });
-    } else if (action === "remove") {
-      if (currentFolderId === "root") {
-        toast({
-          title: "Cannot remove from Virtual Library",
-          description: "Virtual Library shows all indexed files.",
-        });
-
-        return;
-      }
-
-      await removeFileFromVirtualFolder(
-        currentFolderId,
-        file.id
-      );
-
-      const files =
-        await getVirtualFolderFiles(currentFolderId);
-
-      setFolderFiles(files ?? []);
-      setSelectedIds([]);
-      setActiveFile(null);
-
-      toast({
-        title: "Removed from virtual folder",
-        description: "The physical file was not changed.",
-      });
-    } else if (action === "move") {
-      setShowMoveDialog(true);
+    if (!file) {
+      return;
     }
-  } catch (error) {
-    toast({
-      title: "Operation failed",
-      description: error.message,
-      variant: "destructive",
-    });
-  } finally {
-    setFileMenu(null);
-  }
-};
 
-const onSort = (column) => {
-  if (sortBy === column) {
-    setSortDir((direction) =>
-      direction === "asc" ? "desc" : "asc"
-    );
-  } else {
-    setSortBy(column);
-    setSortDir("asc");
-  }
-};
-
-const onNewFolder = () => {
-  addFolder(currentFolderId);
-};
-
-const onRename = () => {
-  if (selectedIds.length === 1) {
-    toast({
-      title: "Virtual reference rename is not connected yet",
-    });
-  }
-};
-
-const onDelete = () => {
-  if (selectedIds.length === 0) {
-    return;
-  }
-
-  toast({
-    title: "Not connected yet",
-    description:
-      "Removing file memberships will be connected in the next step.",
-  });
-};
-
-const onMove = () => {
-  if (selectedIds.length) {
-    setShowMoveDialog(true);
-  }
-};
-
-const handleRefresh = async () => {
-  await loadTree();
-
-  if (currentFolderId !== "root") {
     try {
-      setLoadingFiles(true);
+      if (action === "properties") {
+        setActiveFile(file);
+      } else if (action === "favorite") {
+        toast({
+          title: "Favorites are not connected yet",
+        });
+      } else if (action === "copy") {
+        await navigator.clipboard?.writeText(file.physicalPath);
 
-      const files =
-        await getVirtualFolderFiles(currentFolderId);
+        toast({
+          title: "Physical path copied",
+        });
+      } else if (action === "rename") {
+        toast({
+          title: "Virtual rename is not connected yet",
+        });
+      } else if (action === "remove") {
+        if (currentFolderId === "root") {
+          toast({
+            title: "Cannot remove from Virtual Library",
+            description: "Virtual Library shows all indexed files.",
+          });
 
-      setFolderFiles(files ?? []);
+          return;
+        }
+
+        await removeFileFromVirtualFolder(
+          currentFolderId,
+          file.id
+        );
+
+        const files =
+          await getVirtualFolderFiles(currentFolderId);
+
+        setFolderFiles(files ?? []);
+        setSelectedIds([]);
+        setActiveFile(null);
+
+        toast({
+          title: "Removed from virtual folder",
+          description: "The physical file was not changed.",
+        });
+      } else if (action === "move") {
+        setShowMoveDialog(true);
+      }
     } catch (error) {
       toast({
-        title: "Refresh failed",
+        title: "Operation failed",
         description: error.message,
         variant: "destructive",
       });
     } finally {
-      setLoadingFiles(false);
+      setFileMenu(null);
     }
-  }
+  };
 
-  toast({
-    title: "Refreshed",
-  });
-};
+  const onSort = (column) => {
+    if (sortBy === column) {
+      setSortDir((direction) =>
+        direction === "asc" ? "desc" : "asc"
+      );
+    } else {
+      setSortBy(column);
+      setSortDir("asc");
+    }
+  };
 
-const folderCount = filesInFolder.length;
+  const onNewFolder = () => {
+    addFolder(currentFolderId);
+  };
 
-return (
-  <div className="flex flex-col h-full overflow-hidden bg-background">
-    {/* Concept banner */}
-    <div className="flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-violet-500/10 via-blue-500/10 to-transparent border-b border-border">
-      <Sparkles className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+  const onRename = () => {
+    if (selectedIds.length === 1) {
+      toast({
+        title: "Virtual reference rename is not connected yet",
+      });
+    }
+  };
 
-      <p className="text-[11px] text-muted-foreground">
-        <span className="font-semibold text-foreground">
-          Virtual Explorer
-        </span>{" "}
-        — organize files into virtual folders without
-        moving anything on disk. A file can live in many
-        folders at once.
-      </p>
-    </div>
+  const onDelete = () => {
+    if (selectedIds.length === 0) {
+      return;
+    }
 
-    {loadError && (
-      <div className="px-4 py-2 text-xs border-b border-destructive/30 bg-destructive/10 text-destructive">
-        {loadError}
+    toast({
+      title: "Not connected yet",
+      description:
+        "Removing file memberships will be connected in the next step.",
+    });
+  };
+
+  const onMove = () => {
+    if (selectedIds.length) {
+      setShowMoveDialog(true);
+    }
+  };
+
+  const handleRefresh = async () => {
+    await loadTree();
+
+    if (currentFolderId !== "root") {
+      try {
+        setLoadingFiles(true);
+
+        const files =
+          await getVirtualFolderFiles(currentFolderId);
+
+        setFolderFiles(files ?? []);
+      } catch (error) {
+        toast({
+          title: "Refresh failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingFiles(false);
+      }
+    }
+
+    toast({
+      title: "Refreshed",
+    });
+  };
+
+  const folderCount = filesInFolder.length;
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden bg-background">
+      {/* Concept banner */}
+      <div className="flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-violet-500/10 via-blue-500/10 to-transparent border-b border-border">
+        <Sparkles className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+
+        <p className="text-[11px] text-muted-foreground">
+          <span className="font-semibold text-foreground">
+            Virtual Explorer
+          </span>{" "}
+          — organize files into virtual folders without
+          moving anything on disk. A file can live in many
+          folders at once.
+        </p>
       </div>
-    )}
 
-    <ExplorerToolbar
-      canBack={historyIndex > 0}
-      canForward={historyIndex < history.length - 1}
-      onBack={goBack}
-      onForward={goForward}
-      onUp={goUp}
-      onRefresh={handleRefresh}
-      breadcrumb={breadcrumb}
-      onSelectFolder={navigateTo}
-      search={search}
-      setSearch={setSearch}
-      viewMode={viewMode}
-      setViewMode={setViewMode}
-      onNewFolder={onNewFolder}
-      onRename={onRename}
-      onDelete={onDelete}
-      onMove={onMove}
-      hasSelection={selectedIds.length > 0}
-    />
+      {loadError && (
+        <div className="px-4 py-2 text-xs border-b border-destructive/30 bg-destructive/10 text-destructive">
+          {loadError}
+        </div>
+      )}
 
-    <div className="flex-1 flex min-h-0">
-      {/* Left: tree */}
-      <div className="w-60 shrink-0 border-r border-border bg-card/30 flex flex-col min-h-0">
-        <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70 border-b border-border">
-          Virtual Folders
+      <ExplorerToolbar
+        canBack={historyIndex > 0}
+        canForward={historyIndex < history.length - 1}
+        onBack={goBack}
+        onForward={goForward}
+        onUp={goUp}
+        onRefresh={handleRefresh}
+        breadcrumb={breadcrumb}
+        onSelectFolder={navigateTo}
+        search={search}
+        setSearch={setSearch}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        onNewFolder={onNewFolder}
+        onRename={onRename}
+        onDelete={onDelete}
+        onMove={onMove}
+        hasSelection={selectedIds.length > 0}
+      />
+
+      <div className="flex-1 flex min-h-0">
+        {/* Left: tree */}
+        <div className="w-60 shrink-0 border-r border-border bg-card/30 flex flex-col min-h-0">
+          <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70 border-b border-border">
+            Virtual Folders
+          </div>
+
+          <div className="flex-1 overflow-auto p-1.5">
+            {loadingTree ? (
+              <div className="px-3 py-4 text-xs text-muted-foreground">
+                Loading virtual folders...
+              </div>
+            ) : (
+              <TreeView
+                tree={tree}
+                treeIndex={treeIndex}
+                currentFolderId={currentFolderId}
+                expanded={expanded}
+                toggleExpand={toggleExpand}
+                onSelectFolder={navigateTo}
+                onContextAction={handleContextAction}
+                selectedFileIds={selectedIds}
+                highlightFolderIds={highlightFolderIds}
+                onDropFiles={handleDropFiles}
+                onDropFolder={handleDropFolder}
+                renamingId={renamingId}
+                setRenamingId={setRenamingId}
+                onRename={renameFolder}
+              />
+            )}
+          </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-1.5">
-          {loadingTree ? (
-            <div className="px-3 py-4 text-xs text-muted-foreground">
-              Loading virtual folders...
+        {/* Center: file list */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {loadingFiles ? (
+            <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+              Loading files...
             </div>
           ) : (
-            <TreeView
-              tree={tree}
-              treeIndex={treeIndex}
-              currentFolderId={currentFolderId}
-              expanded={expanded}
-              toggleExpand={toggleExpand}
-              onSelectFolder={navigateTo}
-              onContextAction={handleContextAction}
-              selectedFileIds={selectedIds}
-              highlightFolderIds={highlightFolderIds}
-              onDropFiles={handleDropFiles}
-              onDropFolder={handleDropFolder}
-              renamingId={renamingId}
-              setRenamingId={setRenamingId}
-              onRename={renameFolder}
+            <FileList
+              files={filesInFolder}
+              viewMode={viewMode}
+              selectedIds={selectedIds}
+              onSelect={handleSelect}
+              onContextMenu={handleFileContext}
+              onDragStartFiles={handleDragStartFiles}
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSort={onSort}
+              onOpen={(file) => setActiveFile(file)}
+              folderNameMap={folderNameMap}
             />
           )}
+
+          {/* Status bar */}
+          <div className="flex items-center justify-between px-3 py-1.5 border-t border-border bg-card/50 text-[11px] text-muted-foreground">
+            <span>
+              {folderCount} item
+              {folderCount !== 1 ? "s" : ""}
+              {selectedIds.length > 0 &&
+                ` · ${selectedIds.length} selected`}
+            </span>
+
+            <span className="flex items-center gap-1">
+              <Info className="w-3 h-3" />
+              Virtual view — originals stay in place
+            </span>
+          </div>
+        </div>
+
+        {/* Right: properties */}
+        <div className="w-72 shrink-0 border-l border-border bg-card/30 flex flex-col min-h-0">
+          <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70 border-b border-border">
+            Properties
+          </div>
+
+          <PropertiesPanel
+            file={activeFile}
+            folderCount={folderCount}
+            treeIndex={treeIndex}
+            virtualFolders={activeFileFolders}
+            onNavigate={navigateTo}
+          />
         </div>
       </div>
 
-      {/* Center: file list */}
-      <div className="flex-1 flex flex-col min-h-0">
-        {loadingFiles ? (
-          <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-            Loading files...
-          </div>
-        ) : (
-          <FileList
-            files={filesInFolder}
-            viewMode={viewMode}
-            selectedIds={selectedIds}
-            onSelect={handleSelect}
-            onContextMenu={handleFileContext}
-            onDragStartFiles={handleDragStartFiles}
-            sortBy={sortBy}
-            sortDir={sortDir}
-            onSort={onSort}
-            onOpen={(file) => setActiveFile(file)}
-            folderNameMap={folderNameMap}
+      <FileContextMenu
+        menu={fileMenu}
+        onClose={() => setFileMenu(null)}
+        onAction={handleFileAction}
+      />
+
+      <AnimatePresence>
+        {showMoveDialog && (
+          <MoveDialog
+            tree={tree}
+            onClose={() => setShowMoveDialog(false)}
+            onConfirm={() => {
+              toast({
+                title: "Not connected yet",
+                description:
+                  "Moving file memberships will be connected in the next step.",
+              });
+
+              setShowMoveDialog(false);
+            }}
           />
         )}
-
-        {/* Status bar */}
-        <div className="flex items-center justify-between px-3 py-1.5 border-t border-border bg-card/50 text-[11px] text-muted-foreground">
-          <span>
-            {folderCount} item
-            {folderCount !== 1 ? "s" : ""}
-            {selectedIds.length > 0 &&
-              ` · ${selectedIds.length} selected`}
-          </span>
-
-          <span className="flex items-center gap-1">
-            <Info className="w-3 h-3" />
-            Virtual view — originals stay in place
-          </span>
-        </div>
-      </div>
-
-      {/* Right: properties */}
-      <div className="w-72 shrink-0 border-l border-border bg-card/30 flex flex-col min-h-0">
-        <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70 border-b border-border">
-          Properties
-        </div>
-
-        <PropertiesPanel
-          file={activeFile}
-          folderCount={folderCount}
-          treeIndex={treeIndex}
-          onNavigate={navigateTo}
-        />
-      </div>
+      </AnimatePresence>
     </div>
-
-    <FileContextMenu
-      menu={fileMenu}
-      onClose={() => setFileMenu(null)}
-      onAction={handleFileAction}
-    />
-
-    <AnimatePresence>
-      {showMoveDialog && (
-        <MoveDialog
-          tree={tree}
-          onClose={() => setShowMoveDialog(false)}
-          onConfirm={() => {
-            toast({
-              title: "Not connected yet",
-              description:
-                "Moving file memberships will be connected in the next step.",
-            });
-
-            setShowMoveDialog(false);
-          }}
-        />
-      )}
-    </AnimatePresence>
-  </div>
-);
+  );
 }
 
 function MoveDialog({
@@ -885,8 +920,8 @@ function MoveDialog({
                 setTarget(folder.id)
               }
               className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-muted transition-colors ${target === folder.id
-                  ? "bg-primary/10 text-primary font-medium"
-                  : ""
+                ? "bg-primary/10 text-primary font-medium"
+                : ""
                 }`}
               style={{
                 paddingLeft:
