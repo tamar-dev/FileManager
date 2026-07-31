@@ -106,8 +106,13 @@ public class VirtualFolderAppService : IVirtualFolderAppService
             return Fail("Virtual folder not found.", notFound: true);
         }
 
-        var newName = string.IsNullOrWhiteSpace(dto.Name) ? folder.Name : dto.Name.Trim();
-        var newParentId = dto.ParentId;
+        var newName = string.IsNullOrWhiteSpace(dto.Name)
+           ? folder.Name
+           : dto.Name.Trim();
+
+        var newParentId = dto.ParentIdSpecified
+            ? dto.ParentId
+            : folder.ParentId;
 
         if (string.IsNullOrWhiteSpace(newName))
         {
