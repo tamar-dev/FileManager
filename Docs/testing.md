@@ -441,4 +441,3 @@ The highest-priority behaviors to protect are:
 4. virtual-folder integrity
 5. stable application contracts
 6. predictable integration between layers
-
