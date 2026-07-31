@@ -149,7 +149,7 @@ public class InitialIndexingServiceTests : IDisposable
         upserted!.Should().ContainSingle();
         var entry = upserted.Single();
         entry.Hash.Should().NotBe(oldHash);
-        entry.Hash.Should().MatchRegex("^[0-9A-F]{64}$");
+        entry.Hash.Should().BeEmpty();
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class InitialIndexingServiceTests : IDisposable
 
         upserted.Should().NotBeNull();
         upserted!.Should().ContainSingle();
-        upserted.Single().Hash.Should().MatchRegex("^[0-9A-F]{64}$");
+        upserted.Single().Hash.Should().BeEmpty();
     }
 
     [Fact]
@@ -191,13 +191,13 @@ public class InitialIndexingServiceTests : IDisposable
 
         var factoryMock = new Mock<IFileEntryFactory>();
         factoryMock
-            .Setup(f => f.CreateAsync(goodPath1, It.IsAny<FileEntry?>()))
+            .Setup(f => f.CreateMetadataAsync(goodPath1, It.IsAny<FileEntry?>()))
             .ReturnsAsync(new FileEntry { FullPath = goodPath1, Hash = "HASH1" });
         factoryMock
-            .Setup(f => f.CreateAsync(badPath, It.IsAny<FileEntry?>()))
+            .Setup(f => f.CreateMetadataAsync(badPath, It.IsAny<FileEntry?>()))
             .ThrowsAsync(new IOException("File is locked"));
         factoryMock
-            .Setup(f => f.CreateAsync(goodPath2, It.IsAny<FileEntry?>()))
+            .Setup(f => f.CreateMetadataAsync(goodPath2, It.IsAny<FileEntry?>()))
             .ReturnsAsync(new FileEntry { FullPath = goodPath2, Hash = "HASH2" });
 
         var repositoryMock = new Mock<IFileRepository>();
@@ -233,10 +233,10 @@ public class InitialIndexingServiceTests : IDisposable
 
         var factoryMock = new Mock<IFileEntryFactory>();
         factoryMock
-            .Setup(f => f.CreateAsync(goodPath, It.IsAny<FileEntry?>()))
+            .Setup(f => f.CreateMetadataAsync(goodPath, It.IsAny<FileEntry?>()))
             .ReturnsAsync(new FileEntry { FullPath = goodPath, Hash = "HASH_GOOD" });
         factoryMock
-            .Setup(f => f.CreateAsync(restrictedPath, It.IsAny<FileEntry?>()))
+            .Setup(f => f.CreateMetadataAsync(restrictedPath, It.IsAny<FileEntry?>()))
             .ThrowsAsync(new UnauthorizedAccessException("Access denied"));
 
         var repositoryMock = new Mock<IFileRepository>();
@@ -272,7 +272,7 @@ public class InitialIndexingServiceTests : IDisposable
 
         var factoryMock = new Mock<IFileEntryFactory>();
         factoryMock
-            .Setup(f => f.CreateAsync(It.IsAny<string>(), It.IsAny<FileEntry?>()))
+            .Setup(f => f.CreateMetadataAsync(It.IsAny<string>(), It.IsAny<FileEntry?>()))
             .ThrowsAsync(new IOException("All files locked"));
 
         var repositoryMock = new Mock<IFileRepository>();

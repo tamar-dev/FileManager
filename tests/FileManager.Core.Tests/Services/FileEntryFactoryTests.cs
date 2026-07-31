@@ -13,7 +13,8 @@ public class FileEntryFactoryTests : IDisposable
 
     public FileEntryFactoryTests()
     {
-        _tempDirectory = Directory.CreateTempSubdirectory("FileEntryFactoryTests").FullName;
+        _tempDirectory =
+            Directory.CreateTempSubdirectory("FileEntryFactoryTests").FullName;
     }
 
     [Fact]
@@ -51,7 +52,10 @@ public class FileEntryFactoryTests : IDisposable
     [Fact]
     public void Create_MissingFile_DoesNotThrowAndReturnsEmptyHash()
     {
-        var path = Path.Combine(_tempDirectory, "does-not-exist.txt");
+        var path =
+            Path.Combine(
+                _tempDirectory,
+                "does-not-exist.txt");
 
         var entry = _factory.Create(path);
 
@@ -65,7 +69,9 @@ public class FileEntryFactoryTests : IDisposable
         var path = CreateFile("hello world");
         var fileInfo = new FileInfo(path);
 
-        var existingHash = "EXISTING_HASH_VALUE_1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF";
+        var existingHash =
+            "EXISTING_HASH_VALUE_1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF";
+
         var existingEntry = new FileEntry
         {
             FullPath = fileInfo.FullName,
@@ -74,17 +80,26 @@ public class FileEntryFactoryTests : IDisposable
             Hash = existingHash
         };
 
-        var mockRepository = new Mock<IFileRepository>();
+        var mockRepository =
+            new Mock<IFileRepository>();
+
         mockRepository
-            .Setup(r => r.GetByPathAsync(fileInfo.FullName))
+            .Setup(r =>
+                r.GetByPathAsync(fileInfo.FullName))
             .ReturnsAsync(existingEntry);
 
-        var factory = new FileEntryFactory(repository: mockRepository.Object);
+        var factory =
+            new FileEntryFactory(
+                repository: mockRepository.Object);
 
-        var entry = await factory.CreateAsync(path);
+        var entry =
+            await factory.CreateAsync(path);
 
         entry.Hash.Should().Be(existingHash);
-        mockRepository.Verify(r => r.GetByPathAsync(fileInfo.FullName), Times.Once);
+
+        mockRepository.Verify(
+            r => r.GetByPathAsync(fileInfo.FullName),
+            Times.Once);
     }
 
     [Fact]
@@ -93,28 +108,40 @@ public class FileEntryFactoryTests : IDisposable
         var path = CreateFile("hello world");
         var fileInfo = new FileInfo(path);
 
-        var oldHash = "OLD_HASH_VALUE_1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF";
+        var oldHash =
+            "OLD_HASH_VALUE_1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF";
+
         var existingEntry = new FileEntry
         {
             FullPath = fileInfo.FullName,
             Size = fileInfo.Length - 1,
-            LastModified = fileInfo.LastWriteTimeUtc.AddMinutes(-1),
+            LastModified =
+                fileInfo.LastWriteTimeUtc.AddMinutes(-1),
             Hash = oldHash
         };
 
-        var mockRepository = new Mock<IFileRepository>();
+        var mockRepository =
+            new Mock<IFileRepository>();
+
         mockRepository
-            .Setup(r => r.GetByPathAsync(fileInfo.FullName))
+            .Setup(r =>
+                r.GetByPathAsync(fileInfo.FullName))
             .ReturnsAsync(existingEntry);
 
-        var factory = new FileEntryFactory(repository: mockRepository.Object);
+        var factory =
+            new FileEntryFactory(
+                repository: mockRepository.Object);
 
-        var entry = await factory.CreateAsync(path);
+        var entry =
+            await factory.CreateAsync(path);
 
         entry.Hash.Should().NotBe(oldHash);
         entry.Hash.Should().NotBeNullOrEmpty();
         entry.Hash.Should().MatchRegex("^[0-9A-F]{64}$");
-        mockRepository.Verify(r => r.GetByPathAsync(fileInfo.FullName), Times.Once);
+
+        mockRepository.Verify(
+            r => r.GetByPathAsync(fileInfo.FullName),
+            Times.Once);
     }
 
     [Fact]
@@ -123,18 +150,27 @@ public class FileEntryFactoryTests : IDisposable
         var path = CreateFile("hello world");
         var fileInfo = new FileInfo(path);
 
-        var mockRepository = new Mock<IFileRepository>();
+        var mockRepository =
+            new Mock<IFileRepository>();
+
         mockRepository
-            .Setup(r => r.GetByPathAsync(fileInfo.FullName))
+            .Setup(r =>
+                r.GetByPathAsync(fileInfo.FullName))
             .ReturnsAsync((FileEntry?)null);
 
-        var factory = new FileEntryFactory(repository: mockRepository.Object);
+        var factory =
+            new FileEntryFactory(
+                repository: mockRepository.Object);
 
-        var entry = await factory.CreateAsync(path);
+        var entry =
+            await factory.CreateAsync(path);
 
         entry.Hash.Should().NotBeNullOrEmpty();
         entry.Hash.Should().MatchRegex("^[0-9A-F]{64}$");
-        mockRepository.Verify(r => r.GetByPathAsync(fileInfo.FullName), Times.Once);
+
+        mockRepository.Verify(
+            r => r.GetByPathAsync(fileInfo.FullName),
+            Times.Once);
     }
 
     [Fact]
@@ -146,6 +182,7 @@ public class FileEntryFactoryTests : IDisposable
         var entry = _factory.Create(path);
 
         var after = DateTime.UtcNow;
+
         entry.IndexedAt.Should().BeOnOrAfter(before);
         entry.IndexedAt.Should().BeOnOrBefore(after);
     }
@@ -153,12 +190,17 @@ public class FileEntryFactoryTests : IDisposable
     [Fact]
     public void Create_MissingFile_SetsIndexedAtToUtcNow()
     {
-        var path = Path.Combine(_tempDirectory, "does-not-exist.txt");
+        var path =
+            Path.Combine(
+                _tempDirectory,
+                "does-not-exist.txt");
+
         var before = DateTime.UtcNow;
 
         var entry = _factory.Create(path);
 
         var after = DateTime.UtcNow;
+
         entry.IndexedAt.Should().BeOnOrAfter(before);
         entry.IndexedAt.Should().BeOnOrBefore(after);
     }
@@ -169,9 +211,11 @@ public class FileEntryFactoryTests : IDisposable
         var path = CreateFile("hello world");
         var before = DateTime.UtcNow;
 
-        var entry = await _factory.CreateAsync(path);
+        var entry =
+            await _factory.CreateAsync(path);
 
         var after = DateTime.UtcNow;
+
         entry.IndexedAt.Should().BeOnOrAfter(before);
         entry.IndexedAt.Should().BeOnOrBefore(after);
     }
@@ -179,20 +223,31 @@ public class FileEntryFactoryTests : IDisposable
     [Fact]
     public async Task CreateAsync_MissingFile_SetsIndexedAtToUtcNow()
     {
-        var path = Path.Combine(_tempDirectory, "does-not-exist.txt");
+        var path =
+            Path.Combine(
+                _tempDirectory,
+                "does-not-exist.txt");
+
         var before = DateTime.UtcNow;
 
-        var entry = await _factory.CreateAsync(path);
+        var entry =
+            await _factory.CreateAsync(path);
 
         var after = DateTime.UtcNow;
+
         entry.IndexedAt.Should().BeOnOrAfter(before);
         entry.IndexedAt.Should().BeOnOrBefore(after);
     }
 
     private string CreateFile(string content)
     {
-        var path = Path.Combine(_tempDirectory, Guid.NewGuid().ToString("N") + ".txt");
+        var path =
+            Path.Combine(
+                _tempDirectory,
+                Guid.NewGuid().ToString("N") + ".txt");
+
         File.WriteAllText(path, content);
+
         return path;
     }
 
@@ -200,7 +255,9 @@ public class FileEntryFactoryTests : IDisposable
     {
         if (Directory.Exists(_tempDirectory))
         {
-            Directory.Delete(_tempDirectory, recursive: true);
+            Directory.Delete(
+                _tempDirectory,
+                recursive: true);
         }
     }
 }
