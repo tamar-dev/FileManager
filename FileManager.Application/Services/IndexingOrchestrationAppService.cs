@@ -1,3 +1,4 @@
+using FileManager.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FileManager.Application.Services;
@@ -34,28 +35,84 @@ public class IndexingOrchestrationAppService : IIndexingOrchestrationAppService
         try
         {
             using var scope = _scopeFactory.CreateScope();
-            var indexingAppService = scope.ServiceProvider.GetRequiredService<IIndexingAppService>();
 
-            var progress = new Progress<string>(_ =>
+            var indexingAppService =
+                scope.ServiceProvider
+                    .GetRequiredService<IIndexingAppService>();
+
+            var progress =
+                new SynchronousProgress<string>(_ =>
+                {
+                    var current =
+                        Interlocked.Increment(
+                            ref filesProcessed);
+
+                    _statusService.ReportProgress(
+                        current);
+                });
+
+            var result =
+                await indexingAppService
+                    .IndexDirectoryAsync(
+                        path,
+                        progress);
+
+            if (!result.Success)
             {
-                filesProcessed++;
-                _statusService.ReportProgress(filesProcessed);
-            });
+                _statusService.Fail(
+                    result.ErrorMessage
+                    ?? "Indexing failed.");
 
-            var result = await indexingAppService.IndexDirectoryAsync(path, progress);
-
-            if (result.Success)
-            {
-                _statusService.Complete();
+                return;
             }
-            else
-            {
-                _statusService.Fail(result.ErrorMessage ?? "Indexing failed.");
-            }
+
+            // The searchable metadata index is now ready.
+            // Hash calculation continues afterward and does not delay
+            // completion of the initial indexing operation.
+            _statusService.Complete();
+
+            await RunHashEnrichmentAsync(
+                scope.ServiceProvider);
         }
         catch (Exception ex)
         {
             _statusService.Fail(ex.Message);
+        }
+    }
+
+    private static async Task RunHashEnrichmentAsync(
+        IServiceProvider serviceProvider)
+    {
+        try
+        {
+            var hashEnrichmentService =
+                serviceProvider
+                    .GetRequiredService<HashEnrichmentService>();
+
+            await hashEnrichmentService
+                .EnrichMissingHashesAsync();
+        }
+        catch (Exception)
+        {
+            // Hash enrichment is secondary background work.
+            // Failure here must not change a successfully completed
+            // initial indexing operation into a failed operation.
+        }
+    }
+
+    private sealed class SynchronousProgress<T> : IProgress<T>
+    {
+        private readonly Action<T> _handler;
+
+        public SynchronousProgress(
+            Action<T> handler)
+        {
+            _handler = handler;
+        }
+
+        public void Report(T value)
+        {
+            _handler(value);
         }
     }
 }
