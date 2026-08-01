@@ -1,4 +1,3 @@
-using FileManager.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FileManager.Application.Services;
@@ -66,37 +65,11 @@ public class IndexingOrchestrationAppService : IIndexingOrchestrationAppService
                 return;
             }
 
-            // The searchable metadata index is now ready.
-            // Hash calculation continues afterward and does not delay
-            // completion of the initial indexing operation.
             _statusService.Complete();
-
-            await RunHashEnrichmentAsync(
-                scope.ServiceProvider);
         }
         catch (Exception ex)
         {
             _statusService.Fail(ex.Message);
-        }
-    }
-
-    private static async Task RunHashEnrichmentAsync(
-        IServiceProvider serviceProvider)
-    {
-        try
-        {
-            var hashEnrichmentService =
-                serviceProvider
-                    .GetRequiredService<HashEnrichmentService>();
-
-            await hashEnrichmentService
-                .EnrichMissingHashesAsync();
-        }
-        catch (Exception)
-        {
-            // Hash enrichment is secondary background work.
-            // Failure here must not change a successfully completed
-            // initial indexing operation into a failed operation.
         }
     }
 

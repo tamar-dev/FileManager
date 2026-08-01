@@ -22,16 +22,32 @@ public class HashEnrichmentService
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var files = await _repository.GetAllAsync();
+        var totalEnriched = 0;
 
-        var pending = files
-            .Where(file =>
-                !file.IsDeleted &&
-                string.IsNullOrWhiteSpace(file.Hash))
-            .ToList();
+        while (true)
+        {
+            var enriched = await EnrichNextBatchAsync(
+                progress,
+                cancellationToken);
 
-        var batch = new List<FileEntry>(BatchSize);
-        var enrichedCount = 0;
+            totalEnriched += enriched;
+
+            if (enriched < BatchSize)
+            {
+                return totalEnriched;
+            }
+        }
+    }
+
+    public async Task<int> EnrichNextBatchAsync(
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var pending = await _repository.GetFilesWithoutHashAsync(
+            BatchSize,
+            cancellationToken);
+
+        var enrichedFiles = new List<FileEntry>(pending.Count);
 
         foreach (var file in pending)
         {
@@ -45,18 +61,8 @@ public class HashEnrichmentService
             try
             {
                 file.Hash = _fileHasher.Calculate(file.FullPath);
-                batch.Add(file);
-                enrichedCount++;
+                enrichedFiles.Add(file);
                 progress?.Report(file.FullPath);
-
-                if (batch.Count >= BatchSize)
-                {
-                    await _repository.UpsertBatchAsync(
-                        batch,
-                        cancellationToken);
-
-                    batch.Clear();
-                }
             }
             catch (Exception ex)
                 when (ex is IOException or UnauthorizedAccessException)
@@ -67,13 +73,13 @@ public class HashEnrichmentService
             }
         }
 
-        if (batch.Count > 0)
+        if (enrichedFiles.Count > 0)
         {
             await _repository.UpsertBatchAsync(
-                batch,
+                enrichedFiles,
                 cancellationToken);
         }
 
-        return enrichedCount;
+        return enrichedFiles.Count;
     }
 }

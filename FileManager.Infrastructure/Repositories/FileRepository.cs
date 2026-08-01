@@ -114,4 +114,17 @@ public class FileRepository : IFileRepository
             .Where(f => fullPaths.Contains(f.FullPath) && !f.IsDeleted)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<FileEntry>> GetFilesWithoutHashAsync(
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Files
+            .Where(file =>
+                !file.IsDeleted &&
+                string.IsNullOrEmpty(file.Hash))
+            .OrderBy(file => file.FullPath)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+    }
 }

@@ -61,6 +61,9 @@ public class IndexingServiceTests
 
         public Task<IReadOnlyList<FileEntry>> GetByPathsAsync(IReadOnlyCollection<string> fullPaths, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<FileEntry>>(new List<FileEntry>());
+
+        public Task<IReadOnlyList<FileEntry>> GetFilesWithoutHashAsync(int limit, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<FileEntry>>(new List<FileEntry>());
     }
 
     [Fact]
