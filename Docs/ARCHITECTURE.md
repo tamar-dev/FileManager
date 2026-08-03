@@ -1,4 +1,4 @@
-# FileManager — Architecture
+# FileManager â€” Architecture
 
 ## Product Context
 
@@ -45,6 +45,8 @@ never be violated by any new feature, service, or background process.
 See C4 diagrams:
 - [C1 - System Context](c4/C1-CONTEXT.md)
 - [C2 - Container Diagram](c4/C2-CONTAINER.md)
+- [C3 - Component Diagram](c4/C3-COMPONENTS.md)
+- [C4 - Indexing and Hash-Enrichment Code](c4/C4-INDEXING-CODE.md)
 
 ## Purpose
 Build a modular desktop file management application over the native filesystem, providing a virtual
@@ -82,13 +84,13 @@ organization layer that lets users organize files logically without altering the
 ## Application Layer Responsibility
 The Application layer is the **single clean boundary** between any front end (CLI today, desktop UI later)
 and the business/persistence layers. Rules:
-- May depend on `FileManager.Core` only — never on `FileManager.Infrastructure` or EF Core packages.
-- Never returns Core entities (e.g. `FileEntry`) to callers — always maps to DTOs.
+- May depend on `FileManager.Core` only â€” never on `FileManager.Infrastructure` or EF Core packages.
+- Never returns Core entities (e.g. `FileEntry`) to callers â€” always maps to DTOs.
 - Contains orchestration/use-case logic only (calling Core services, aggregating results); it does not
   contain filesystem access, persistence logic, or UI rendering concerns.
 - Any new user-facing feature (search, virtual folders, duplicate management, photo organization,
   thumbnail cache) is exposed as a new Application service + DTOs, backed by new Core interfaces and
-  Infrastructure implementations — without requiring changes to how the CLI or UI is wired.
+  Infrastructure implementations â€” without requiring changes to how the CLI or UI is wired.
 
 ## Index Source Abstraction
 
@@ -103,10 +105,10 @@ IEnumerable<string> EnumeratePaths(string rootPath, CancellationToken cancellati
 Responsibilities:
 - Enumerate every file path that should be considered for indexing under `rootPath`.
 - Support cooperative cancellation via `CancellationToken`.
-- Return only paths — no metadata, no hashing, no persistence.
+- Return only paths â€” no metadata, no hashing, no persistence.
 - Never modify, move, rename, or delete any file.
 
-### `FileSystemIndexSource` — Current Implementation
+### `FileSystemIndexSource` â€” Current Implementation
 `FileSystemIndexSource` (in `FileManager.Core/Services`) is the default implementation registered in DI.
 It performs a recursive `Directory.EnumerateFiles` scan and yields paths one at a time, checking for
 cancellation between each path.
@@ -121,7 +123,7 @@ services.AddScoped<IIndexSource, FileSystemIndexSource>();
 `FileSystemIndexSource`, `Directory`, or any other filesystem API directly. The service only knows
 about the `IIndexSource` contract.
 
-This means the entire indexing pipeline — batching, hash reuse, repository persistence — is driven
+This means the entire indexing pipeline â€” batching, hash reuse, repository persistence â€” is driven
 purely by whatever paths the injected source provides. Swapping the source does not require any change
 to the service or the pipeline.
 
