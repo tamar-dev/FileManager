@@ -112,7 +112,7 @@ For deeper technical context, see:
 - [Data flow](Docs/DATA_FLOW.md)
 - [Domain model](Docs/DOMAIN_MODEL.md)
 - [Performance strategy](Docs/PERFORMANCE.md)
-- [C4 diagrams](Docs/c4/C1-CONTEXT.md)
+- [C4 model: C1 context](Docs/c4/C1-CONTEXT.md), [C2 containers](Docs/c4/C2-CONTAINER.md), [C3 components](Docs/c4/C3-COMPONENTS.md), and [C4 indexing code](Docs/c4/C4-INDEXING-CODE.md)
 - [Architecture decision records](Docs/ADR/)
 
 ## Technology
