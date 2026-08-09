@@ -1,5 +1,4 @@
 using FileManager.Application.Dtos;
-using FileManager.Application.Dtos;
 
 namespace FileManager.Application.Services;
 
@@ -9,7 +8,7 @@ public interface IIndexStatusService
 
     bool TryStart(string path);
 
-    void ReportProgress(int filesProcessed);
+    void ReportProgress(int filesProcessed, string? currentFilePath);
 
     void Complete();
 
