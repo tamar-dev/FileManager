@@ -406,20 +406,6 @@ services.AddScoped<IIndexSource, MftIndexSource>();
 
 The objective is that changing the enumeration strategy should not require changes to:
 
-
-* `InitialIndexingService`
-* `FileEntryFactory`
-* repository contracts
-* Application services
-* API callers
-* CLI callers
-=======
-This means the entire indexing pipeline — batching, hash reuse, repository persistence — is driven
-purely by whatever paths the injected source provides. Swapping the source does not require any change
-to the service or the pipeline.
-
-The objective is that changing the enumeration strategy should not require changes to:
-
 * `InitialIndexingService`
 * `FileEntryFactory`
 * repository contracts
@@ -428,7 +414,6 @@ The objective is that changing the enumeration strategy should not require chang
 * CLI callers
 
 This means the indexing pipeline remains driven by the paths supplied by the injected source, while batching, metadata creation, hash enrichment, and persistence remain independent of the enumeration strategy.
-
 ---
 
 ## Indexing Flow
