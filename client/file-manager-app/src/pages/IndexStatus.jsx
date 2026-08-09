@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  Activity, Zap, Clock, FileStack, FolderOpen, ArrowRight,
-  Plus, Edit3, Trash2, CheckCircle2, Loader2
+  Activity, Clock, FileStack, FolderOpen, CheckCircle2, Loader2
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { getIndexStatus, getIndexedLocations } from "@/lib/api";
@@ -100,26 +99,26 @@ export default function IndexStatus() {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
         className="bg-gradient-to-br from-violet-500/5 to-indigo-500/5 border border-violet-500/15 rounded-2xl p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-violet-600 flex items-center justify-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-12 h-12 rounded-xl bg-violet-600 flex items-center justify-center shrink-0">
               <Activity className="w-6 h-6 text-white" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="text-sm font-semibold">
                 {state === "running" ? "Scan in progress" : state === "completed" ? "Last scan completed" : state === "failed" ? "Last scan failed" : "No active scan"}
               </div>
-              <div className="text-xs text-muted-foreground font-mono truncate max-w-[300px]">
+              <div className="text-xs text-muted-foreground font-mono truncate max-w-[420px]" title={status?.path || undefined}>
                 {status?.path || "—"}
               </div>
             </div>
           </div>
           {progress !== null ? (
-            <div className="text-right">
+            <div className="text-right shrink-0">
               <div className="text-3xl font-semibold tabular-nums">{progress.toFixed(1)}%</div>
               <div className="text-xs text-muted-foreground">complete</div>
             </div>
           ) : (
-            <div className="text-right">
+            <div className="text-right shrink-0">
               <div className="text-3xl font-semibold tabular-nums">{filesProcessed.toLocaleString()}</div>
               <div className="text-xs text-muted-foreground">files processed</div>
             </div>
@@ -132,6 +131,18 @@ export default function IndexStatus() {
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.5 }}
             />
+          </div>
+        )}
+        {state === "running" && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg border border-border/60 bg-background/60 px-3 py-2 min-w-0">
+            <Loader2 className="w-4 h-4 animate-spin text-violet-500 shrink-0" />
+            <span className="text-xs font-medium text-muted-foreground shrink-0">Current file</span>
+            <span
+              className="text-xs font-mono truncate min-w-0"
+              title={status?.currentFilePath || undefined}
+            >
+              {status?.currentFilePath || "Waiting for first file…"}
+            </span>
           </div>
         )}
         {status?.error && (
