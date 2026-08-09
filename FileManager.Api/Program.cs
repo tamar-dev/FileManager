@@ -1,10 +1,10 @@
 using FileManager.Application;
+using FileManager.Application.Dtos;
 using FileManager.Application.Services;
+using FileManager.Api.Services;
 using FileManager.Infrastructure;
 using FileManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using FileManager.Application.Dtos;
-using FileManager.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +12,7 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddFileManagerApplication();
 builder.Services.AddFileManagerInfrastructure();
-
+builder.Services.AddHostedService<HashEnrichmentBackgroundService>();
 
 builder.Services.AddCors(options =>
 {

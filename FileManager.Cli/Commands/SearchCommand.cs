@@ -26,7 +26,7 @@ public class SearchCommand
 
         foreach (var file in results)
         {
-            Console.WriteLine($"{file.FullPath} ({file.Size} bytes, modified {file.LastModified})");
+            Console.WriteLine($"{file.Path} ({file.Size} bytes, modified {file.Modified})");
         }
     }
 

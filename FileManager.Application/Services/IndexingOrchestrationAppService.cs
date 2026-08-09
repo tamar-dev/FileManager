@@ -34,28 +34,58 @@ public class IndexingOrchestrationAppService : IIndexingOrchestrationAppService
         try
         {
             using var scope = _scopeFactory.CreateScope();
-            var indexingAppService = scope.ServiceProvider.GetRequiredService<IIndexingAppService>();
 
-            var progress = new Progress<string>(_ =>
+            var indexingAppService =
+                scope.ServiceProvider
+                    .GetRequiredService<IIndexingAppService>();
+
+            var progress =
+                new SynchronousProgress<string>(_ =>
+                {
+                    var current =
+                        Interlocked.Increment(
+                            ref filesProcessed);
+
+                    _statusService.ReportProgress(
+                        current);
+                });
+
+            var result =
+                await indexingAppService
+                    .IndexDirectoryAsync(
+                        path,
+                        progress);
+
+            if (!result.Success)
             {
-                filesProcessed++;
-                _statusService.ReportProgress(filesProcessed);
-            });
+                _statusService.Fail(
+                    result.ErrorMessage
+                    ?? "Indexing failed.");
 
-            var result = await indexingAppService.IndexDirectoryAsync(path, progress);
-
-            if (result.Success)
-            {
-                _statusService.Complete();
+                return;
             }
-            else
-            {
-                _statusService.Fail(result.ErrorMessage ?? "Indexing failed.");
-            }
+
+            _statusService.Complete();
         }
         catch (Exception ex)
         {
             _statusService.Fail(ex.Message);
+        }
+    }
+
+    private sealed class SynchronousProgress<T> : IProgress<T>
+    {
+        private readonly Action<T> _handler;
+
+        public SynchronousProgress(
+            Action<T> handler)
+        {
+            _handler = handler;
+        }
+
+        public void Report(T value)
+        {
+            _handler(value);
         }
     }
 }

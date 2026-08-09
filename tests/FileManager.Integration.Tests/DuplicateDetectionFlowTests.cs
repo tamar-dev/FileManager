@@ -1,5 +1,5 @@
 using FileManager.Application.Services;
-using FileManager.Application.Services;
+using FileManager.Core.Services;
 using FileManager.Infrastructure.Persistence;
 using FileManager.Infrastructure.Repositories;
 using FluentAssertions;
@@ -16,7 +16,10 @@ public class DuplicateDetectionFlowTests : IDisposable
 
     public DuplicateDetectionFlowTests()
     {
-        _rootFolder = Directory.CreateTempSubdirectory("DuplicateDetectionFlowTests").FullName;
+        _rootFolder = Directory
+            .CreateTempSubdirectory("DuplicateDetectionFlowTests")
+            .FullName;
+
         _dataFolder = Path.Combine(_rootFolder, "data");
         Directory.CreateDirectory(_dataFolder);
 
@@ -31,21 +34,49 @@ public class DuplicateDetectionFlowTests : IDisposable
     }
 
     [Fact]
-    public async Task IndexDirectoryAsync_WithDuplicateFiles_ReportsDuplicateGroupEndToEnd()
+    public async Task IndexAndHashEnrichment_WithDuplicateFiles_ReportsDuplicateGroupEndToEnd()
     {
-        File.WriteAllText(Path.Combine(_dataFolder, "original.txt"), "duplicate content");
-        File.WriteAllText(Path.Combine(_dataFolder, "copy.txt"), "duplicate content");
-        File.WriteAllText(Path.Combine(_dataFolder, "unique.txt"), "unique content");
+        File.WriteAllText(
+            Path.Combine(_dataFolder, "original.txt"),
+            "duplicate content");
+
+        File.WriteAllText(
+            Path.Combine(_dataFolder, "copy.txt"),
+            "duplicate content");
+
+        File.WriteAllText(
+            Path.Combine(_dataFolder, "unique.txt"),
+            "unique content");
 
         var repository = new FileRepository(_context);
         var duplicateAppService = new DuplicateAppService(repository);
 
-        var service = new Core.Services.InitialIndexingService(
+        var indexingService = new InitialIndexingService(
             repository,
-            new Core.Services.FileSystemIndexSource(),
-            new Core.Services.FileEntryFactory());
+            new FileSystemIndexSource(),
+            new FileEntryFactory());
 
-        await service.IndexDirectoryAsync(_dataFolder);
+        await indexingService.IndexDirectoryAsync(_dataFolder);
+
+        var indexedFiles = await repository.GetAllAsync();
+
+        indexedFiles.Should().HaveCount(3);
+        indexedFiles.Should().OnlyContain(
+            file => string.IsNullOrEmpty(file.Hash));
+
+        var hashEnrichmentService = new HashEnrichmentService(
+            repository,
+            new FileHasher());
+
+        var enrichedCount = await hashEnrichmentService
+            .EnrichMissingHashesAsync();
+
+        enrichedCount.Should().Be(3);
+
+        var enrichedFiles = await repository.GetAllAsync();
+
+        enrichedFiles.Should().OnlyContain(
+            file => !string.IsNullOrEmpty(file.Hash));
 
         var groups = await duplicateAppService.GetDuplicateReportAsync();
 

@@ -54,6 +54,14 @@ public class FileChangeWorkerTests
         public Task<IReadOnlyList<FileEntry>> GetByPathsAsync(IReadOnlyCollection<string> fullPaths, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<FileEntry>>(
                 _files.Values.Where(f => fullPaths.Contains(f.FullPath)).ToList());
+
+        public Task<IReadOnlyList<FileEntry>> GetFilesWithoutHashAsync(int limit, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<FileEntry>>(
+                _files.Values
+                    .Where(f => !f.IsDeleted && string.IsNullOrEmpty(f.Hash))
+                    .OrderBy(f => f.FullPath)
+                    .Take(limit)
+                    .ToList());
     }
 
     [Fact]

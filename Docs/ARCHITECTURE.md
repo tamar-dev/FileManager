@@ -82,13 +82,21 @@ FileManager.Infrastructure
     +---- SQLite
     |
     +---- Physical Filesystem
-````
+```
 
 The React client does not access SQLite or the physical filesystem directly.
 
 The API and CLI are separate hosts over the same Application and Infrastructure layers.
 
+See C4 diagrams:
+
+* [C1 - System Context](c4/C1-CONTEXT.md)
+* [C2 - Container Diagram](c4/C2-CONTAINER.md)
+* [C3 - Component Diagram](c4/C3-COMPONENTS.md)
+* [C4 - Indexing and Hash-Enrichment Code](c4/C4-INDEXING-CODE.md)
+
 ---
+
 
 ## Purpose
 
@@ -285,7 +293,6 @@ The CLI contains no business logic of its own.
 ---
 
 ## Application Layer Responsibility
-
 The Application layer is the clean boundary used by application hosts.
 
 Current presentation/runtime paths include:
@@ -303,7 +310,9 @@ Rules:
 
 * Application may depend on Core contracts and domain types as required.
 * Presentation layers should consume DTOs rather than persistence entities.
+* Application services must not return Core entities directly to presentation callers; they should map data to DTOs.
 * Application orchestration must not depend directly on EF Core or SQLite.
+* Application must not contain filesystem access, persistence logic, or UI rendering concerns.
 * New user-facing features should normally be exposed through an Application service and DTO contract.
 * Infrastructure-specific implementation details remain behind Core abstractions.
 
@@ -351,7 +360,6 @@ IEnumerable<string> EnumeratePaths(
 ```
 
 Responsibilities:
-
 * Enumerate every file path that should be considered for indexing under `rootPath`
 * Support cooperative cancellation
 * Return paths only
@@ -362,9 +370,9 @@ Responsibilities:
 
 ### `FileSystemIndexSource`
 
-`FileSystemIndexSource` is the current filesystem-based implementation.
+`FileSystemIndexSource` is the current filesystem-based implementation registered in dependency injection.
 
-It performs recursive filesystem enumeration and yields paths to the indexing pipeline.
+It performs recursive filesystem enumeration using `Directory.EnumerateFiles` and yields paths to the indexing pipeline while supporting cooperative cancellation.
 
 The rest of the indexing pipeline does not need to know how paths were discovered.
 
@@ -391,6 +399,7 @@ A future optimized source, such as an NTFS/MFT-based implementation, can impleme
 
 For example:
 
+
 ```csharp
 services.AddScoped<IIndexSource, MftIndexSource>();
 ```
@@ -404,6 +413,7 @@ The objective is that changing the enumeration strategy should not require chang
 * API callers
 * CLI callers
 
+This means the indexing pipeline remains driven by the paths supplied by the injected source, while batching, metadata creation, hash enrichment, and persistence remain independent of the enumeration strategy.
 ---
 
 ## Indexing Flow

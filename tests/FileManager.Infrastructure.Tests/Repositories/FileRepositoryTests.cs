@@ -169,6 +169,23 @@ public class FileRepositoryTests : IDisposable
         result.Single().FullPath.Should().Be("a.txt");
     }
 
+    [Fact]
+    public async Task GetFilesWithoutHashAfterAsync_ReturnsPendingRowsAfterCursorInOrder()
+    {
+        await _repository.UpsertAsync(CreateEntry("a.txt", hash: ""));
+        await _repository.UpsertAsync(CreateEntry("b.txt", hash: ""));
+        await _repository.UpsertAsync(CreateEntry("c.txt", hash: ""));
+        await _repository.UpsertAsync(CreateEntry("d.txt", hash: "READY"));
+
+        var result = await _repository.GetFilesWithoutHashAfterAsync(
+            limit: 10,
+            afterPath: "a.txt");
+
+        result.Select(file => file.FullPath)
+            .Should()
+            .Equal("b.txt", "c.txt");
+    }
+
     private static FileEntry CreateEntry(string fullPath, string hash, long size = 100)
     {
         return new FileEntry
