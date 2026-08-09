@@ -40,14 +40,15 @@ public class IndexingOrchestrationAppService : IIndexingOrchestrationAppService
                     .GetRequiredService<IIndexingAppService>();
 
             var progress =
-                new SynchronousProgress<string>(_ =>
+                new SynchronousProgress<string>(currentFilePath =>
                 {
                     var current =
                         Interlocked.Increment(
                             ref filesProcessed);
 
                     _statusService.ReportProgress(
-                        current);
+                        current,
+                        currentFilePath);
                 });
 
             var result =
