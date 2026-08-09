@@ -104,11 +104,12 @@ public class HashEnrichmentServiceTests : IDisposable
         persisted.Should().ContainSingle();
         persisted.Single().FullPath.Should().Be(validPath);
         persisted.Single().Hash.Should().NotBeNullOrEmpty();
+        var lastFailedPath = failedEntries[failedEntries.Count - 1].FullPath;
 
         repositoryMock.Verify(
             r => r.GetFilesWithoutHashAfterAsync(
                 101,
-                failedEntries[^1].FullPath,
+                lastFailedPath,
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
