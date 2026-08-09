@@ -14,6 +14,8 @@ public class IndexStatusDto
 
     public string? Path { get; set; }
 
+    public string? CurrentFilePath { get; set; }
+
     public int FilesProcessed { get; set; }
 
     public int? TotalFiles { get; set; }
