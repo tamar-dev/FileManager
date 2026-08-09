@@ -23,6 +23,7 @@ services.AddFileManagerApplication();
 services.AddTransient<IndexCommand>();
 services.AddTransient<WatchCommand>();
 services.AddTransient<DuplicatesCommand>();
+services.AddTransient<SearchCommand>();
 //services.AddTransient<SearchCommand>();
 services.AddTransient<DashboardCommand>();
 

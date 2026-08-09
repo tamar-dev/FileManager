@@ -1,39 +1,373 @@
-# Testing Guide
+# FileManager â€” Testing Guide
 
-This document describes the automated test suite for the FileManager solution: how it's structured, how to run it, and what each layer validates.
+## Purpose
 
-## Test Project Structure
+This document describes the automated test strategy for FileManager.
 
-```
+The test suite exists to protect:
+
+- filesystem safety
+- indexing correctness
+- persistence behavior
+- application-service contracts
+- virtual-organization rules
+- integration between Core, Infrastructure, and SQLite
+
+The exact number of tests is intentionally not documented here because it changes frequently.
+
+The source of truth for current coverage is the test projects themselves.
+
+---
+
+## Test Projects
+
+```text
 tests/
- ??? FileManager.Core.Tests            Unit tests for Core business logic (no I/O dependencies beyond temp files)
- ??? FileManager.Application.Tests     Unit tests for Application services (use-case orchestration, DTO mapping)
- ??? FileManager.Infrastructure.Tests  Tests for EF Core / SQLite repository implementation
- ??? FileManager.Integration.Tests     End-to-end tests wiring Core + Infrastructure together
+â”œâ”€â”€ FileManager.Core.Tests
+â”œâ”€â”€ FileManager.Application.Tests
+â”œâ”€â”€ FileManager.Infrastructure.Tests
+â””â”€â”€ FileManager.Integration.Tests
+````
+
+All test projects target the same .NET version as the application.
+
+The suite uses:
+
+* xUnit
+* FluentAssertions
+* Moq
+
+---
+
+## Test Layer Responsibilities
+
+### `FileManager.Core.Tests`
+
+Validates domain and core business behavior in isolation.
+
+Typical coverage includes:
+
+* hashing
+* file metadata creation
+* hash reuse
+* duplicate detection
+* initial indexing behavior
+* indexing abstractions
+* virtual-folder rules
+* hierarchy validation
+* cycle prevention
+* filesystem-independent business rules
+
+Core tests should avoid EF Core and SQLite.
+
+External dependencies should be represented through mocked interfaces where appropriate.
+
+---
+
+### `FileManager.Application.Tests`
+
+Validates application use cases and DTO mapping.
+
+Typical coverage includes:
+
+* indexing orchestration
+* dashboard aggregation
+* duplicate reporting
+* search
+* indexed locations
+* path normalization behavior
+* virtual-folder operations
+* virtual-folder membership
+* application-level validation
+* result/DTO mapping
+* conflict and not-found outcomes
+
+Application tests should focus on use-case behavior.
+
+They should not depend on:
+
+* EF Core
+* SQLite
+* HTTP
+* React
+* real filesystem persistence unless a test explicitly requires it
+
+---
+
+### `FileManager.Infrastructure.Tests`
+
+Validates persistence and infrastructure implementations.
+
+Typical coverage includes:
+
+* `FileRepository`
+* indexed-root repository
+* virtual-folder repository
+* virtual-folder membership repository
+* EF Core mappings
+* SQLite persistence
+* add/update/delete behavior
+* unique constraints
+* data round-tripping
+* repository query semantics
+
+Where practical, infrastructure tests should use a real SQLite database rather than mocking EF Core.
+
+---
+
+### `FileManager.Integration.Tests`
+
+Validates real flows across multiple layers.
+
+Typical integration scenarios include:
+
+* initial indexing into SQLite
+* real file metadata extraction
+* hash persistence
+* filesystem watcher flows
+* create/update/delete synchronization
+* rename/move synchronization
+* virtual-folder persistence
+* virtual-folder membership persistence
+* end-to-end repository wiring
+* dependency injection configuration
+
+Integration tests should verify that components work together as configured in the application.
+
+---
+
+## Indexing Tests
+
+### Initial Indexing
+
+Initial indexing tests should verify that:
+
+* candidate paths are supplied through `IIndexSource`
+* discovered files are processed once
+* metadata is created correctly
+* files are persisted
+* batch persistence behaves correctly
+* cancellation is respected
+* empty directories do not create invalid records
+
+`InitialIndexingService` should not depend directly on `Directory` or a concrete filesystem-scanning implementation.
+
+---
+
+### Hash Reuse
+
+Tests should verify that:
+
+```text
+unchanged size + unchanged last-modified
+    -> existing hash may be reused
 ```
 
-All test projects target the same framework as the application (`net9.0`) and use:
-- **xUnit** — test framework
-- **FluentAssertions** — assertion library
-- **Moq** — mocking framework (used in Core tests to isolate dependencies via interfaces)
+and:
 
-Architecture boundaries are preserved:
-- `FileManager.Core.Tests` only depends on `FileManager.Core`. It never references EF Core or SQLite — dependencies like `IFileRepository` and `IFileScanner` are mocked via Moq.
-- `FileManager.Application.Tests` only depends on `FileManager.Core` and `FileManager.Application`. It never references EF Core, SQLite, or `FileManager.Infrastructure` — `IFileRepository`/`IFileScanner` are mocked via Moq, and assertions are made against DTOs (`IndexingResultDto`, `DuplicateGroupDto`, `DashboardDto`), never domain entities.
-- `FileManager.Infrastructure.Tests` exercises the real `FileRepository` against a real SQLite database (in-memory, via a shared `SqliteConnection`), verifying persistence behavior without a mock.
-- `FileManager.Integration.Tests` wires real components together (`FileScanner`, `InitialIndexingService`, `LocalFileWatcher`, `FileChangeWorker`, `FileRepository`) against a real file-backed SQLite database in a temporary folder, validating true end-to-end behavior.
+```text
+new or modified file
+    -> SHA-256 is recalculated
+```
 
-No test-only logic was added to production code. The one production fix made alongside this work (`FileManagerDbContext.OnConfiguring` now respects externally supplied `DbContextOptions`) is a correctness fix, not test scaffolding — it was required because the context previously ignored any connection passed to it.
+The purpose is both correctness and performance.
+
+---
+
+### Incremental Monitoring
+
+Watcher/incremental tests should verify:
+
+* file creation adds indexed metadata
+* file modification updates metadata
+* file deletion removes stale metadata
+* file rename/move updates the index correctly
+* application behavior reflects external filesystem changes
+
+The application must never initiate destructive filesystem behavior during these tests.
+
+---
+
+## Search Tests
+
+Search tests should validate combinations of supported metadata filters such as:
+
+* name
+* extension
+* physical path
+* modified-after
+* modified-before
+
+They should also verify DTO mapping, including file classification/type when that is part of the public contract.
+
+Search should operate against indexed metadata rather than scanning the filesystem at query time.
+
+---
+
+## Duplicate Detection Tests
+
+Tests should verify:
+
+* files with identical valid hashes are grouped
+* files with different hashes are not grouped
+* empty/invalid hashes are excluded where appropriate
+* file count is correct
+* total size is correct
+* wasted/potential savings calculations are correct
+* DTO mapping preserves file identity and metadata
+
+Duplicate detection remains report-only.
+
+No duplicate test should delete physical files as part of the feature behavior.
+
+---
+
+## Indexed Location Tests
+
+Tests should verify:
+
+* valid paths are normalized before persistence
+* surrounding quotes are removed when appropriate
+* whitespace is trimmed
+* duplicate paths are detected case-insensitively on Windows
+* invalid or missing paths are rejected
+* removing an indexed location removes only application metadata
+* physical directories are not deleted
+
+Where applicable, repository tests should verify uniqueness behavior at the persistence boundary.
+
+---
+
+## Virtual Folder Tests
+
+Virtual folders are a core product capability and require explicit coverage.
+
+### Creation
+
+Verify:
+
+* root folders can be created
+* nested folders can be created
+* blank names are rejected
+* missing parents are rejected
+* duplicate sibling names are handled according to the application rule
+
+### Rename / Update
+
+Verify:
+
+* a folder can be renamed
+* a folder can be moved under another parent
+* self-parenting is rejected
+* hierarchy cycles are rejected
+* missing target parents are rejected
+
+### Deletion
+
+Verify:
+
+* deleting a virtual folder affects metadata only
+* physical files remain unchanged
+* non-empty-folder behavior follows the defined application rule
+* memberships are handled safely
+
+### Membership
+
+Verify:
+
+* an indexed file can be added to a virtual folder
+* the same file can belong to multiple virtual folders
+* duplicate membership does not create duplicate association rows
+* membership can be removed
+* removing membership does not remove the `FileEntry`
+* removing membership does not modify the physical file
+
+---
+
+## Dependency Injection Tests
+
+DI tests should verify that the main application registrations can be resolved successfully.
+
+Important registrations include:
+
+```text
+IIndexingAppService
+IDuplicateAppService
+IDashboardAppService
+ISearchAppService
+IIndexedLocationAppService
+IVirtualFolderAppService
+IIndexStatusService
+IIndexingOrchestrationAppService
+```
+
+Infrastructure repository implementations should also be resolvable through their interfaces.
+
+The purpose of these tests is to catch composition-root regressions early.
+
+---
+
+## Database Tests
+
+SQLite tests should verify:
+
+* migrations create the expected schema
+* repository mappings persist correctly
+* IDs and foreign keys round-trip correctly
+* many-to-many membership behaves correctly
+* unique constraints behave as intended
+* database access does not accidentally target the process working directory
+
+The application uses its configured local database location rather than relying on implicit `DbContext`
+fallback configuration.
+
+---
+
+## Filesystem Safety
+
+Tests involving real files must preserve the project's non-negotiable safety rules.
+
+Production feature behavior under test must not:
+
+* delete user files
+* move user files
+* rename user files
+* overwrite user files
+* modify file contents
+
+Temporary files created by the tests themselves may be cleaned up as test fixtures.
+
+That cleanup is test infrastructure, not FileManager product behavior.
+
+---
+
+## Test Isolation
+
+Each test should own its temporary state.
+
+For filesystem/integration tests:
+
+* use temporary directories
+* isolate test data from the real user filesystem
+* use dedicated SQLite databases
+* clean up test-owned resources
+* avoid sharing mutable database state across tests
+
+When testing `FileSystemWatcher`, use polling with a timeout rather than fixed sleeps where possible.
+
+This reduces flakiness while still failing quickly when the watcher pipeline is broken.
+
+---
 
 ## Running the Tests
 
-Run all tests in the solution from the repository root:
+From the repository root:
 
 ```powershell
-dotnet test FileManager.Engine.sln
+dotnet test
 ```
 
-Run a single test project:
+Run a single project:
 
 ```powershell
 dotnet test tests/FileManager.Core.Tests
@@ -42,48 +376,68 @@ dotnet test tests/FileManager.Infrastructure.Tests
 dotnet test tests/FileManager.Integration.Tests
 ```
 
-Run a filtered subset of tests:
+Run a filtered group:
 
 ```powershell
-dotnet test --filter "FullyQualifiedName~DuplicateDetector"
+dotnet test --filter "FullyQualifiedName~VirtualFolder"
 ```
 
-## What Each Layer Validates
+or:
 
-### `FileManager.Core.Tests`
+```powershell
+dotnet test --filter "FullyQualifiedName~Search"
+```
 
-- **`FileHasherTests`** — identical content produces identical SHA-256 hashes, different content produces different hashes, empty files hash consistently.
-- **`FileEntryFactoryTests`** — `FileEntry` creation from a path populates `FullPath`, `Size`, and a valid SHA-256 hash for existing files; missing files are handled without throwing and produce an empty hash.
-- **`DuplicateDetectorTests`** — files with identical hashes are grouped, files with differing hashes are not grouped, groups have the expected membership/counts, files with empty hashes are excluded.
-- **`InitialIndexingServiceTests`** — using mocked `IFileScanner`/`IFileRepository`, verifies the service scans the given path and persists every discovered file exactly once, with no repository calls when no files are found.
+---
 
-### `FileManager.Application.Tests`
+## Build Validation
 
-- **`IndexingAppServiceTests`** — using mocked `IFileScanner`/`IFileRepository`, verifies `IndexDirectoryAsync` persists all scanned files, returns an accurate `IndexingResultDto` (files indexed, success flag), reports per-file progress via `IProgress<string>`, and returns a failure result (not an exception) when cancelled.
-- **`DuplicateAppServiceTests`** — using a mocked `IFileRepository`, verifies duplicate groups are correctly mapped to `DuplicateGroupDto` (hash, file count, total size, wasted size, file list), and that no duplicates yields an empty list.
-- **`DashboardAppServiceTests`** — using a mocked `IFileRepository`, verifies `DashboardDto` aggregates indexed file count, total size, duplicate group/file counts, and potential storage savings correctly, including the zero-files case.
+Before merging a feature:
 
-### `FileManager.Infrastructure.Tests`
+```powershell
+dotnet build
+dotnet test
+```
 
-- **`FileRepositoryTests`** — using a real SQLite database (in-memory), verifies:
-  - Adding a new file persists it.
-  - Upserting an existing file updates its fields (hash, size, etc.) rather than duplicating it.
-  - Deleting a file removes it; deleting a non-existent file does not throw.
-  - `GetAllAsync` returns all persisted files.
-  - Hash values round-trip correctly through the database.
+For changes involving the React client, also run from:
 
-### `FileManager.Integration.Tests`
+```text
+client/file-manager-app
+```
 
-- **`InitialIndexingFlowTests`** — creates a temporary folder with real files, runs `FileScanner` ? `InitialIndexingService` ? SQLite, and verifies all files are discovered, persisted, and have non-empty hash values.
-- **`WatcherFlowTests`** — creates a temporary folder, starts `LocalFileWatcher` + `FileChangeQueue` + `FileChangeWorker` + `IndexingService` against a real SQLite database, and verifies:
-  - Creating a file adds an entry to the index.
-  - Modifying a file updates its hash and size.
-  - Deleting a file removes its entry from the index.
+```powershell
+npm run build
+```
 
-  These tests poll the database with a timeout (rather than sleeping a fixed duration) to avoid flakiness while still failing fast if the watcher pipeline breaks.
+A feature should not be considered complete if:
 
-## Notes on Test Isolation
+* the .NET solution does not build
+* relevant automated tests fail
+* the React production build fails for client changes
 
-- Each test class creates its own temporary directory (via `Directory.CreateTempSubdirectory`) and/or its own SQLite database file, and cleans up in `Dispose()`.
-- Integration tests keep the *watched/scanned* folder separate from the *database* folder, since `FileSystemWatcher` and `FileScanner` would otherwise pick up the SQLite database's own files (`.db`, `.db-wal`) as part of the monitored directory.
-- `WatcherFlowTests` uses a dedicated `DbContext`/connection per read to avoid concurrent access exceptions, since the background `FileChangeWorker` uses its own long-lived `DbContext` on a separate thread.
+---
+
+## Testing Principle
+
+The test suite should protect behavior, not implementation details.
+
+Prefer tests that answer:
+
+```text
+Does the system behave correctly?
+```
+
+over tests that answer:
+
+```text
+Did this private method get called exactly this way?
+```
+
+The highest-priority behaviors to protect are:
+
+1. physical file safety
+2. indexing correctness
+3. persistence integrity
+4. virtual-folder integrity
+5. stable application contracts
+6. predictable integration between layers
