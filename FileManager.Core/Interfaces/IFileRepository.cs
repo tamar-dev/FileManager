@@ -25,4 +25,10 @@ public interface IFileRepository
     Task<IReadOnlyList<FileEntry>> GetFilesWithoutHashAsync(
         int limit,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<FileEntry>> GetFilesWithoutHashAfterAsync(
+        int limit,
+        string? afterPath,
+        CancellationToken cancellationToken = default) =>
+        GetFilesWithoutHashAsync(limit, cancellationToken);
 }

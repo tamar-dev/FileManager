@@ -20,6 +20,8 @@ public sealed class HashEnrichmentBackgroundService : BackgroundService
     protected override async Task ExecuteAsync(
         CancellationToken stoppingToken)
     {
+        string? cursor = null;
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -29,14 +31,19 @@ public sealed class HashEnrichmentBackgroundService : BackgroundService
                 var enrichmentService = scope.ServiceProvider
                     .GetRequiredService<HashEnrichmentService>();
 
-                var enrichedCount = await enrichmentService
-                    .EnrichNextBatchAsync(
+                var result = await enrichmentService
+                    .EnrichNextBatchWithCursorAsync(
+                        cursor,
                         cancellationToken: stoppingToken);
 
-                if (enrichedCount == 0)
+                if (result.HasMore && result.LastExaminedPath is not null)
                 {
-                    await Task.Delay(IdleDelay, stoppingToken);
+                    cursor = result.LastExaminedPath;
+                    continue;
                 }
+
+                cursor = null;
+                await Task.Delay(IdleDelay, stoppingToken);
             }
             catch (OperationCanceledException)
                 when (stoppingToken.IsCancellationRequested)
@@ -49,6 +56,7 @@ public sealed class HashEnrichmentBackgroundService : BackgroundService
                     ex,
                     "Hash enrichment background processing failed.");
 
+                cursor = null;
                 await Task.Delay(IdleDelay, stoppingToken);
             }
         }

@@ -3,6 +3,12 @@ using FileManager.Core.Interfaces;
 
 namespace FileManager.Core.Services;
 
+public sealed record HashEnrichmentBatchResult(
+    int EnrichedCount,
+    int ExaminedCount,
+    string? LastExaminedPath,
+    bool HasMore);
+
 public class HashEnrichmentService
 {
     private const int BatchSize = 100;
@@ -23,19 +29,23 @@ public class HashEnrichmentService
         CancellationToken cancellationToken = default)
     {
         var totalEnriched = 0;
+        string? cursor = null;
 
         while (true)
         {
-            var enriched = await EnrichNextBatchAsync(
+            var result = await EnrichNextBatchWithCursorAsync(
+                cursor,
                 progress,
                 cancellationToken);
 
-            totalEnriched += enriched;
+            totalEnriched += result.EnrichedCount;
 
-            if (enriched < BatchSize)
+            if (!result.HasMore || result.LastExaminedPath is null)
             {
                 return totalEnriched;
             }
+
+            cursor = result.LastExaminedPath;
         }
     }
 
@@ -43,10 +53,26 @@ public class HashEnrichmentService
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var pending = await _repository.GetFilesWithoutHashAsync(
-            BatchSize,
+        var result = await EnrichNextBatchWithCursorAsync(
+            afterPath: null,
+            progress,
             cancellationToken);
 
+        return result.EnrichedCount;
+    }
+
+    public async Task<HashEnrichmentBatchResult> EnrichNextBatchWithCursorAsync(
+        string? afterPath,
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var candidates = await _repository.GetFilesWithoutHashAfterAsync(
+            BatchSize + 1,
+            afterPath,
+            cancellationToken);
+
+        var hasMore = candidates.Count > BatchSize;
+        var pending = candidates.Take(BatchSize).ToList();
         var enrichedFiles = new List<FileEntry>(pending.Count);
 
         foreach (var file in pending)
@@ -80,6 +106,10 @@ public class HashEnrichmentService
                 cancellationToken);
         }
 
-        return enrichedFiles.Count;
+        return new HashEnrichmentBatchResult(
+            EnrichedCount: enrichedFiles.Count,
+            ExaminedCount: pending.Count,
+            LastExaminedPath: pending.LastOrDefault()?.FullPath,
+            HasMore: hasMore);
     }
 }
