@@ -115,14 +115,27 @@ public class FileRepository : IFileRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<FileEntry>> GetFilesWithoutHashAsync(
+    public Task<IReadOnlyList<FileEntry>> GetFilesWithoutHashAsync(
         int limit,
+        CancellationToken cancellationToken = default) =>
+        GetFilesWithoutHashAfterAsync(limit, null, cancellationToken);
+
+    public async Task<IReadOnlyList<FileEntry>> GetFilesWithoutHashAfterAsync(
+        int limit,
+        string? afterPath,
         CancellationToken cancellationToken = default)
     {
-        return await _context.Files
+        var query = _context.Files
             .Where(file =>
                 !file.IsDeleted &&
-                string.IsNullOrEmpty(file.Hash))
+                string.IsNullOrEmpty(file.Hash));
+
+        if (!string.IsNullOrEmpty(afterPath))
+        {
+            query = query.Where(file => string.Compare(file.FullPath, afterPath) > 0);
+        }
+
+        return await query
             .OrderBy(file => file.FullPath)
             .Take(limit)
             .ToListAsync(cancellationToken);
