@@ -1,5 +1,4 @@
 using FileManager.Application.Dtos;
-using FileManager.Application.Dtos;
 
 namespace FileManager.Application.Services;
 
@@ -16,6 +15,7 @@ public class IndexStatusService : IIndexStatusService
             {
                 State = _status.State,
                 Path = _status.Path,
+                CurrentFilePath = _status.CurrentFilePath,
                 FilesProcessed = _status.FilesProcessed,
                 TotalFiles = _status.TotalFiles,
                 StartedAt = _status.StartedAt,
@@ -38,6 +38,7 @@ public class IndexStatusService : IIndexStatusService
             {
                 State = IndexingState.Running,
                 Path = path,
+                CurrentFilePath = null,
                 FilesProcessed = 0,
                 TotalFiles = null,
                 StartedAt = DateTime.UtcNow
@@ -47,7 +48,7 @@ public class IndexStatusService : IIndexStatusService
         }
     }
 
-    public void ReportProgress(int filesProcessed)
+    public void ReportProgress(int filesProcessed, string? currentFilePath)
     {
         lock (_lock)
         {
@@ -57,6 +58,7 @@ public class IndexStatusService : IIndexStatusService
             }
 
             _status.FilesProcessed = filesProcessed;
+            _status.CurrentFilePath = currentFilePath;
         }
     }
 
