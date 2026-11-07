@@ -1,0 +1,40 @@
+name: Bug report
+description: Report a reproducible problem
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Context / Problem
+      description: What happened, and what was expected?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. ...\n2. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope / suspected area
+      description: Optional; do not guess implementation details.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      value: "- [ ] Reproduction no longer fails\n- [ ] Regression test added where feasible"
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation / environment
+      description: OS, version, logs (redact personal file paths and sensitive data).
+  - type: textarea
+    id: related
+    attributes:
+      label: Related issues / PRs
