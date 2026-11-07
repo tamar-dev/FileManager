@@ -1,0 +1,28 @@
+{
+  "name": "FileManager Full Stack Preview",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:1-9.0-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+  "forwardPorts": [
+    5173,
+    5093
+  ],
+  "portsAttributes": {
+    "5093": {
+      "label": "FileManager .NET API",
+      "onAutoForward": "silent",
+      "visibility": "private"
+    },
+    "5173": {
+      "label": "FileManager React Preview",
+      "onAutoForward": "openBrowser",
+      "visibility": "private"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postStartCommand": "bash .devcontainer/start.sh",
+  "remoteUser": "vscode"
+}
