@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  FolderTree, Plus, Tag, Zap, MoreVertical, Trash2, Edit3,
+  FolderTree, Plus, Tag, Zap, MoreVertical, Trash2,
   Folder, Image as ImageIcon, File as FileIcon, Clock, Palette
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";

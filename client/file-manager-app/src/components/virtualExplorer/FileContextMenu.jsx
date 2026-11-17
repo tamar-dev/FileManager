@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Pencil, Trash2, FolderInput, Star, Copy, Info, X } from "lucide-react";
+import { Pencil, Trash2, FolderInput, Star, Copy, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function FileContextMenu({ menu, onClose, onAction }) {
