@@ -3,6 +3,7 @@ name: CI
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
   workflow_dispatch:
@@ -29,7 +30,7 @@ jobs:
       - name: Build (Release)
         run: dotnet build FileManager.Engine.sln --configuration Release --no-restore
       - name: Test (Release)
-        run: dotnet test FileManager.Engine.sln --configuration Release --no-build --logger "trx;LogFileName=results.trx" --results-directory TestResults
+        run: dotnet test FileManager.Engine.sln --configuration Release --no-build --logger trx --results-directory TestResults
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
