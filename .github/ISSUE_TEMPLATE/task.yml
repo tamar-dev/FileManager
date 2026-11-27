@@ -1,0 +1,48 @@
+name: Engineering task
+description: Refactor, test, docs, or maintenance work
+title: "[Chore] "
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options:
+        - Refactor
+        - Test
+        - Docs
+        - Chore
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context / Problem
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      value: "- [ ] "
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of Scope
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation
+    validations:
+      required: true
+  - type: textarea
+    id: related
+    attributes:
+      label: Related issues / PRs

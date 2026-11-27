@@ -1,0 +1,39 @@
+name: Feature request
+description: Propose a focused product capability
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context / Problem
+      description: What user need does this address?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Describe the smallest useful implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      value: "- [ ] "
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of Scope
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation
+      description: How will the behavior be verified?
+  - type: textarea
+    id: related
+    attributes:
+      label: Related issues / PRs
