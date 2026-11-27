@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  Activity, Zap, Clock, FileStack, FolderOpen, ArrowRight,
-  Plus, Edit3, Trash2, CheckCircle2, Loader2
+  Activity, Clock, FileStack, FolderOpen,
+  CheckCircle2, Loader2
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { getIndexStatus, getIndexedLocations } from "@/lib/api";

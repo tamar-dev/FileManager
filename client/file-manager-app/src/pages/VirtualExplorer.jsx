@@ -10,7 +10,6 @@ import FileContextMenu from "@/components/virtualExplorer/FileContextMenu";
 
 import {
   buildTreeIndex,
-  findNode,
   getBreadcrumb,
   getFolderNameMap,
 } from "@/lib/virtualExplorerData";

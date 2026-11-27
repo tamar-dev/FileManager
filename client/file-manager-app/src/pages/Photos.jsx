@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Image as ImageIcon, Star, Calendar, Maximize2, X, Download, Heart, Folder } from "lucide-react";
+import { Star, Calendar, X, Download, Heart, Folder } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { photos, photoAlbums } from "@/lib/mockData";
 import { cn } from "@/lib/utils";

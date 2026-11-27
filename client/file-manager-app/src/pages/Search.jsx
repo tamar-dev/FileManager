@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search as SearchIcon, Filter, Calendar, HardDrive, Tag,
-  ChevronDown, Star, Download, X
+  Star, Download, X
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { fileTags } from "@/lib/mockData";
