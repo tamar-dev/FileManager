@@ -1,6 +1,6 @@
 # Full-stack Codespaces preview
 
-From GitHub: **Code → Codespaces → Create codespace on branch**. Select `feat/codespaces-fullstack-preview` until this PR is merged.
+From GitHub: **Code → Codespaces → Create codespace on branch**. Choose the branch you want to develop on.
 
 The devcontainer installs .NET 9 and Node 22, restores the solution, installs React dependencies with `npm ci`, and starts two background processes when the Codespace starts:
 
@@ -9,6 +9,8 @@ The devcontainer installs .NET 9 and Node 22, restores the solution, installs Re
 - SQLite: created by the API using its existing configuration/migrations.
 
 React requests to `/api/*` are proxied by Vite to the .NET server. No public API URL or cloud credentials are needed. Check `/api/health` on the React preview URL to verify the proxy.
+
+The container waits for the API and React proxy health checks before reporting startup complete. If automatic startup fails, inspect the logs, then retry with `bash .devcontainer/start.sh` from the repository root. The script reuses listening ports and verifies health rather than reporting success merely because processes were launched.
 
 ### Diagnostics
 
